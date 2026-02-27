@@ -1,4 +1,4 @@
-package com.example.ruvo_app.ui.theme
+package com.example.ruvo_app.core.theme
 
 import androidx.compose.ui.graphics.Color
 
