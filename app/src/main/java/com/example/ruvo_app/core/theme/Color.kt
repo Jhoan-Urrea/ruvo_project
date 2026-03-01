@@ -1,6 +1,10 @@
-package com.example.ruvo_app.ui.theme
+package com.example.ruvo_app.core.theme
 
 import androidx.compose.ui.graphics.Color
+
+val RuvoBlue = Color(0xFF0000FF)
+val White = Color(0xFFFFFFFF)
+val Black = Color(0xFF000000)
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
