@@ -24,14 +24,14 @@ import com.example.ruvo_app.core.theme.Ruvo_appTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
+fun ResetPasswordScreen(
     onBackClick: () -> Unit = {},
-    onForgotPasswordClick: () -> Unit = {},
-    onLoginSuccess: () -> Unit = {},
-    viewModel: LoginViewModel = viewModel()
+    onResetSuccess: () -> Unit = {},
+    viewModel: ResetPasswordViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -61,9 +61,9 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.Start
             ) {
                 Spacer(modifier = Modifier.height(20.dp))
-                
+
                 Text(
-                    text = "Iniciar sesión",
+                    text = "Nueva contraseña",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp
@@ -71,52 +71,49 @@ fun LoginScreen(
                     color = Color.Black
                 )
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Error message
-                if (uiState.error != null) {
-                    Text(
-                        text = uiState.error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                }
-
-                // Email Field
                 Text(
-                    text = "Correo electrónico",
+                    text = "Ingresa el código que enviamos a tu correo y crea tu nueva contraseña.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Recovery Code Field
+                Text(
+                    text = "Código de recuperación",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
-                    value = uiState.email,
-                    onValueChange = { viewModel.onEmailChanged(it) },
+                    value = uiState.code,
+                    onValueChange = { viewModel.onCodeChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("ejemplo@correo.com") },
+                    placeholder = { Text("123456") },
                     shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.LightGray
-                    ),
-                    enabled = !uiState.isLoading
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Password Field
+                // New Password Field
                 Text(
-                    text = "Contraseña",
+                    text = "Nueva contraseña",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
-                    value = uiState.password,
-                    onValueChange = { viewModel.onPasswordChanged(it) },
+                    value = uiState.newPassword,
+                    onValueChange = { viewModel.onNewPasswordChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("••••••••") },
                     shape = RoundedCornerShape(12.dp),
@@ -132,29 +129,54 @@ fun LoginScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.LightGray
-                    ),
-                    enabled = !uiState.isLoading
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                TextButton(
-                    onClick = onForgotPasswordClick,
-                    modifier = Modifier.align(Alignment.End),
-                    enabled = !uiState.isLoading
-                ) {
+                // Confirm Password Field
+                Text(
+                    text = "Confirmar contraseña",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                OutlinedTextField(
+                    value = uiState.confirmPassword,
+                    onValueChange = { viewModel.onConfirmPasswordChanged(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("••••••••") },
+                    shape = RoundedCornerShape(12.dp),
+                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+
+                if (uiState.error != null) {
                     Text(
-                        text = "¿Olvidaste tu contraseña?",
+                        text = uiState.error!!,
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
                 Button(
-                    onClick = { viewModel.onLoginClicked(onLoginSuccess) },
+                    onClick = { 
+                        viewModel.onResetPasswordClicked(onResetSuccess)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -165,14 +187,14 @@ fun LoginScreen(
                     enabled = !uiState.isLoading
                 ) {
                     Text(
-                        text = "Entrar",
+                        text = "Restablecer contraseña",
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
@@ -181,14 +203,27 @@ fun LoginScreen(
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
+            
+            if (uiState.isPasswordReset) {
+                AlertDialog(
+                    onDismissRequest = { /* Handle dismiss */ },
+                    confirmButton = {
+                        TextButton(onClick = onResetSuccess) {
+                            Text("Aceptar")
+                        }
+                    },
+                    title = { Text("Éxito") },
+                    text = { Text("Tu contraseña ha sido restablecida correctamente. Ahora puedes iniciar sesión.") }
+                )
+            }
         }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun LoginScreenFormPreview() {
+fun ResetPasswordScreenPreview() {
     Ruvo_appTheme {
-        LoginScreen()
+        ResetPasswordScreen()
     }
 }

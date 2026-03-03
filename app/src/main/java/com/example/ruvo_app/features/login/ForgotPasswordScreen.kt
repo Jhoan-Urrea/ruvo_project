@@ -5,8 +5,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,8 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,14 +20,12 @@ import com.example.ruvo_app.core.theme.Ruvo_appTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
+fun ForgotPasswordScreen(
     onBackClick: () -> Unit = {},
-    onForgotPasswordClick: () -> Unit = {},
-    onLoginSuccess: () -> Unit = {},
-    viewModel: LoginViewModel = viewModel()
+    onCodeSent: () -> Unit = {},
+    viewModel: ForgotPasswordViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var passwordVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -61,9 +55,9 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.Start
             ) {
                 Spacer(modifier = Modifier.height(20.dp))
-                
+
                 Text(
-                    text = "Iniciar sesión",
+                    text = "Recuperar contraseña",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp
@@ -71,17 +65,15 @@ fun LoginScreen(
                     color = Color.Black
                 )
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Error message
-                if (uiState.error != null) {
-                    Text(
-                        text = uiState.error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                }
+                Text(
+                    text = "Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu contraseña.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(40.dp))
 
                 // Email Field
                 Text(
@@ -102,59 +94,26 @@ fun LoginScreen(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.LightGray
                     ),
-                    enabled = !uiState.isLoading
+                    isError = uiState.error != null
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Password Field
-                Text(
-                    text = "Contraseña",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                OutlinedTextField(
-                    value = uiState.password,
-                    onValueChange = { viewModel.onPasswordChanged(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("••••••••") },
-                    shape = RoundedCornerShape(12.dp),
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
-                    ),
-                    enabled = !uiState.isLoading
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                TextButton(
-                    onClick = onForgotPasswordClick,
-                    modifier = Modifier.align(Alignment.End),
-                    enabled = !uiState.isLoading
-                ) {
+                if (uiState.error != null) {
                     Text(
-                        text = "¿Olvidaste tu contraseña?",
+                        text = uiState.error!!,
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
                 Button(
-                    onClick = { viewModel.onLoginClicked(onLoginSuccess) },
+                    onClick = { 
+                        viewModel.onResetPasswordClicked {
+                            // On success, we notify that the code was sent
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -165,14 +124,14 @@ fun LoginScreen(
                     enabled = !uiState.isLoading
                 ) {
                     Text(
-                        text = "Entrar",
+                        text = "Enviar instrucciones",
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
 
@@ -181,14 +140,27 @@ fun LoginScreen(
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
+            
+            if (uiState.isEmailSent) {
+                AlertDialog(
+                    onDismissRequest = { /* Handle dismiss */ },
+                    confirmButton = {
+                        TextButton(onClick = onCodeSent) {
+                            Text("Aceptar")
+                        }
+                    },
+                    title = { Text("Correo enviado") },
+                    text = { Text("Se ha enviado un correo con el código para restablecer tu contraseña.") }
+                )
+            }
         }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun LoginScreenFormPreview() {
+fun ForgotPasswordScreenPreview() {
     Ruvo_appTheme {
-        LoginScreen()
+        ForgotPasswordScreen()
     }
 }

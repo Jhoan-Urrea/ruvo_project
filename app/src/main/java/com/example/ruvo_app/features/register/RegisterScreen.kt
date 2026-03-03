@@ -21,25 +21,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
-import com.example.ruvo_app.data.repository.AuthRepositoryImpl
-import com.example.ruvo_app.domain.usecase.RegisterUseCase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onBackClick: () -> Unit = {},
     onRegisterSuccess: () -> Unit = {},
-    viewModel: RegisterViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return RegisterViewModel(RegisterUseCase(AuthRepositoryImpl())) as T
-            }
-        }
-    )
+    viewModel: RegisterViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
