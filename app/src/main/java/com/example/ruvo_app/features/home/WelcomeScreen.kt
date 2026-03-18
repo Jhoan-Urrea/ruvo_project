@@ -39,7 +39,7 @@ fun WelcomeScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.isotipo),
+                    painter = painterResource(id = R.drawable.logo_ruvo),
                     contentDescription = "Ruvo Logo",
                     modifier = Modifier.size(200.dp),
                     contentScale = ContentScale.Fit

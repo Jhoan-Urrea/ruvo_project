@@ -1,12 +1,16 @@
 package com.example.ruvo_app.features.login
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,7 +41,12 @@ fun ResetPasswordScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { },
+                title = {
+                    Text(
+                        text = "Cambiar contraseña",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -58,109 +68,134 @@ fun ResetPasswordScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(horizontal = 32.dp),
-                horizontalAlignment = Alignment.Start
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Icono de candado
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Color(0xFFE8F0FE), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Nueva contraseña",
-                    style = MaterialTheme.typography.headlineMedium.copy(
+                    text = "Crea una nueva contraseña",
+                    style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp
+                        fontSize = 24.sp
                     ),
+                    textAlign = TextAlign.Center,
                     color = Color.Black
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Ingresa el código que enviamos a tu correo y crea tu nueva contraseña.",
+                    text = "Tu nueva contraseña debe ser diferente a las anteriores por seguridad.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    textAlign = TextAlign.Center,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Recovery Code Field
-                Text(
-                    text = "Código de recuperación",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                OutlinedTextField(
-                    value = uiState.code,
-                    onValueChange = { viewModel.onCodeChanged(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("123456") },
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
+                // Campo Nueva contraseña
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Nueva contraseña",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // New Password Field
-                Text(
-                    text = "Nueva contraseña",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                OutlinedTextField(
-                    value = uiState.newPassword,
-                    onValueChange = { viewModel.onNewPasswordChanged(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("••••••••") },
-                    shape = RoundedCornerShape(12.dp),
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
+                    OutlinedTextField(
+                        value = uiState.newPassword,
+                        onValueChange = { viewModel.onNewPasswordChanged(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Ingresa tu nueva contraseña") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = Color.Gray)
+                        },
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = null)
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = Color.LightGray
+                        )
                     )
-                )
+                }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Confirm Password Field
-                Text(
-                    text = "Confirmar contraseña",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                OutlinedTextField(
-                    value = uiState.confirmPassword,
-                    onValueChange = { viewModel.onConfirmPasswordChanged(it) },
+                // Requisitos de contraseña
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("••••••••") },
-                    shape = RoundedCornerShape(12.dp),
-                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "La contraseña debe contener:",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.Black
                     )
-                )
+                    RequirementItem(text = "Mínimo 8 caracteres", isMet = uiState.hasMinLength)
+                    RequirementItem(text = "Al menos una mayúscula", isMet = uiState.hasUpperCase)
+                    RequirementItem(text = "Al menos una minúscula", isMet = uiState.hasLowerCase)
+                    RequirementItem(text = "Un número o símbolo", isMet = uiState.hasNumberOrSymbol)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Campo Confirmar contraseña
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Confirmar contraseña",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    OutlinedTextField(
+                        value = uiState.confirmPassword,
+                        onValueChange = { viewModel.onConfirmPasswordChanged(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Confirma tu nueva contraseña") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = Color.Gray)
+                        },
+                        trailingIcon = {
+                            val image = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                            IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                Icon(imageVector = image, contentDescription = null)
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = Color.LightGray
+                        )
+                    )
+                }
 
                 if (uiState.error != null) {
                     Text(
@@ -217,6 +252,25 @@ fun ResetPasswordScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun RequirementItem(text: String, isMet: Boolean) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .background(if (isMet) MaterialTheme.colorScheme.primary else Color.LightGray, CircleShape)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isMet) Color.Black else Color.Gray
+        )
     }
 }
 

@@ -13,12 +13,15 @@ class ResetPasswordViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ResetPasswordUiState())
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
-    fun onCodeChanged(code: String) {
-        _uiState.update { it.copy(code = code, error = null) }
-    }
-
     fun onNewPasswordChanged(password: String) {
-        _uiState.update { it.copy(newPassword = password, error = null) }
+        _uiState.update { it.copy(
+            newPassword = password,
+            error = null,
+            hasMinLength = password.length >= 8,
+            hasUpperCase = password.any { it.isUpperCase() },
+            hasLowerCase = password.any { it.isLowerCase() },
+            hasNumberOrSymbol = password.any { !it.isLetter() }
+        ) }
     }
 
     fun onConfirmPasswordChanged(password: String) {
@@ -28,7 +31,7 @@ class ResetPasswordViewModel : ViewModel() {
     fun onResetPasswordClicked(onSuccess: () -> Unit) {
         val state = _uiState.value
         
-        if (state.code.isBlank() || state.newPassword.isBlank() || state.confirmPassword.isBlank()) {
+        if (state.newPassword.isBlank() || state.confirmPassword.isBlank()) {
             _uiState.update { it.copy(error = "Por favor, completa todos los campos") }
             return
         }
@@ -38,8 +41,8 @@ class ResetPasswordViewModel : ViewModel() {
             return
         }
 
-        if (state.newPassword.length < 6) {
-            _uiState.update { it.copy(error = "La contraseña debe tener al menos 6 caracteres") }
+        if (!state.hasMinLength || !state.hasUpperCase || !state.hasLowerCase || !state.hasNumberOrSymbol) {
+            _uiState.update { it.copy(error = "La contraseña no cumple con todos los requisitos") }
             return
         }
 
@@ -54,9 +57,12 @@ class ResetPasswordViewModel : ViewModel() {
 }
 
 data class ResetPasswordUiState(
-    val code: String = "",
     val newPassword: String = "",
     val confirmPassword: String = "",
+    val hasMinLength: Boolean = false,
+    val hasUpperCase: Boolean = false,
+    val hasLowerCase: Boolean = false,
+    val hasNumberOrSymbol: Boolean = false,
     val isLoading: Boolean = false,
     val isPasswordReset: Boolean = false,
     val error: String? = null

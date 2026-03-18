@@ -15,6 +15,7 @@ import com.example.ruvo_app.features.home.HomeScreen
 import com.example.ruvo_app.features.login.*
 import com.example.ruvo_app.features.register.RegisterScreen
 import com.example.ruvo_app.features.register.RegisterViewModel
+import com.example.ruvo_app.features.dashboard.DashboardScreen
 
 @Composable
 fun AppNavGraph() {
@@ -60,7 +61,9 @@ fun AppNavGraph() {
                     navController.navigate(Screen.ForgotPassword.route)
                 },
                 onLoginSuccess = {
-                    // Navigate to main app screen
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
                 },
                 viewModel = viewModel
             )
@@ -111,10 +114,16 @@ fun AppNavGraph() {
                     navController.popBackStack()
                 },
                 onRegisterSuccess = {
-                    navController.navigate(Screen.Login.route)
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
                 },
                 viewModel = viewModel
             )
+        }
+
+        composable(Screen.Dashboard.route) {
+            DashboardScreen()
         }
     }
 }
