@@ -26,6 +26,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
 import com.example.ruvo_app.data.repository.AuthRepositoryImpl
+import com.example.ruvo_app.data.repository.UserRepositoryImpl
 import com.example.ruvo_app.domain.usecase.RegisterUseCase
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +37,11 @@ fun RegisterScreen(
     viewModel: RegisterViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return RegisterViewModel(RegisterUseCase(AuthRepositoryImpl())) as T
+                return RegisterViewModel(
+                    RegisterUseCase(
+                        AuthRepositoryImpl(userRepository = UserRepositoryImpl())
+                    )
+                ) as T
             }
         }
     )
