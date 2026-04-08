@@ -52,9 +52,11 @@ class RegisterViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             
             val user = User(
+                id = "",
                 fullName = state.fullName,
                 phone = state.phone,
-                email = state.email
+                email = state.email,
+                username = state.fullName.replace(" ", "").lowercase() // Default username logic
             )
             
             val result = registerUseCase(user, state.password)
