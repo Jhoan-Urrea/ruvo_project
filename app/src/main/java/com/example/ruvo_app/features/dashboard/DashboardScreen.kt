@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
+import com.example.ruvo_app.features.notifications.NotificationsScreen
 import com.example.ruvo_app.features.profile.ProfileScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,6 +116,7 @@ fun DashboardScreen(
                         onAddClick = onAddPostClick
                     )
                 }
+                2 -> NotificationsScreen()
                 3 -> ProfileScreen(onSettingsClick = onSettingsClick)
                 else -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
