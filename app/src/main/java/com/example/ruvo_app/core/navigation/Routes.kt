@@ -1,15 +1,17 @@
 package com.example.ruvo_app.core.navigation
 
-sealed class Screen(val route: String) {
-    object Home : Screen("home")
-    object AuthSelection : Screen("auth_selection")
-    object Login : Screen("login")
-    object Register : Screen("register")
-    object ForgotPassword : Screen("forgot_password")
-    object ResetPassword : Screen("reset_password")
-    object Dashboard : Screen("dashboard")
-    object Profile : Screen("profile")
-    object Settings : Screen("settings")
-    object EditProfile : Screen("edit_profile")
-    object ModeratorDashboard : Screen("moderator_dashboard")
+import kotlinx.serialization.Serializable
+
+sealed interface Screen {
+    @Serializable object Home : Screen
+    @Serializable object AuthSelection : Screen
+    @Serializable object Login : Screen
+    @Serializable object Register : Screen
+    @Serializable object ForgotPassword : Screen
+    @Serializable object ResetPassword : Screen
+    @Serializable object Dashboard : Screen
+    @Serializable object Profile : Screen
+    @Serializable object Settings : Screen
+    @Serializable object EditProfile : Screen
+    @Serializable object ModeratorDashboard : Screen
 }

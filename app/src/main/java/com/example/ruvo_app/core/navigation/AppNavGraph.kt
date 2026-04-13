@@ -33,91 +33,111 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
     val navController = rememberNavController()
     val authState by authViewModel.uiState.collectAsState()
 
-    val startDestination = when (val state = authState) {
-        is AuthUiState.Authenticated -> Screen.Dashboard.route
-        else -> Screen.Home.route
+    val startDestination = when (authState) {
+        is AuthUiState.Authenticated -> Screen.Dashboard
+        else -> Screen.Home
     }
 
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
-        composable(Screen.Home.route) {
-            HomeScreen(onStartClick = { navController.navigate(Screen.AuthSelection.route) })
+        composable<Screen.Home> {
+            HomeScreen(onStartClick = { navController.navigate(Screen.AuthSelection) })
         }
 
-        composable(Screen.AuthSelection.route) {
+        composable<Screen.AuthSelection> {
             AuthSelectionScreen(
-                onLoginClick = { navController.navigate(Screen.Login.route) },
-                onRegisterClick = { navController.navigate(Screen.Register.route) }
+                onLoginClick = { navController.navigate(Screen.Login) },
+                onRegisterClick = { navController.navigate(Screen.Register) }
             )
         }
 
-        composable(Screen.Login.route) {
+        composable<Screen.Login> {
+            val loginViewModel: com.example.ruvo_app.features.login.LoginViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        return com.example.ruvo_app.features.login.LoginViewModel(
+                            LoginUseCase(AuthRepositoryImpl(userRepository = UserRepositoryImpl()))
+                        ) as T
+                    }
+                }
+            )
             LoginScreen(
                 onBackClick = { navController.popBackStack() },
-                onForgotPasswordClick = { navController.navigate(Screen.ForgotPassword.route) },
-                viewModel = com.example.ruvo_app.features.login.LoginViewModel(
-                    LoginUseCase(AuthRepositoryImpl(userRepository = UserRepositoryImpl()))
-                )
+                onForgotPasswordClick = { navController.navigate(Screen.ForgotPassword) },
+                onLoginSuccess = {
+                    navController.navigate(Screen.Dashboard) {
+                        popUpTo(Screen.Home) { inclusive = true }
+                    }
+                },
+                viewModel = loginViewModel
             )
         }
 
-        composable(Screen.ForgotPassword.route) {
+        composable<Screen.ForgotPassword> {
             ForgotPasswordScreen(
                 onBackClick = { navController.popBackStack() },
-                onCodeSent = { navController.navigate(Screen.ResetPassword.route) }
+                onCodeSent = { navController.navigate(Screen.ResetPassword) }
             )
         }
 
-        composable(Screen.ResetPassword.route) {
+        composable<Screen.ResetPassword> {
             ResetPasswordScreen(
                 onBackClick = { navController.popBackStack() },
                 onResetSuccess = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.AuthSelection.route) { inclusive = false }
+                    navController.navigate(Screen.Login) {
+                        popUpTo(Screen.AuthSelection) { inclusive = false }
                     }
                 }
             )
         }
 
-        composable(Screen.Register.route) {
-            RegisterScreen(onBackClick = { navController.popBackStack() })
+        composable<Screen.Register> {
+            RegisterScreen(
+                onBackClick = { navController.popBackStack() },
+                onRegisterSuccess = {
+                    navController.navigate(Screen.Login) {
+                        popUpTo(Screen.AuthSelection) { inclusive = false }
+                    }
+                }
+            )
         }
 
-        composable(Screen.Dashboard.route) {
+        composable<Screen.Dashboard> {
             val state = authState as? AuthUiState.Authenticated
             DashboardScreen(
                 onLogout = { authViewModel.logout() },
-                onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                onAdminDetailedClick = { navController.navigate(Screen.ModeratorDashboard.route) },
+                onSettingsClick = { navController.navigate(Screen.Settings) },
+                onAdminDetailedClick = { navController.navigate(Screen.ModeratorDashboard) },
                 isAdmin = state?.user?.role == UserRole.MODERATOR
             )
         }
 
-        composable(Screen.ModeratorDashboard.route) {
+        composable<Screen.ModeratorDashboard> {
             ModeratorDashboard(
                 onLogout = { authViewModel.logout() },
                 onBack = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.Settings.route) {
+        composable<Screen.Settings> {
             SettingsScreen(
                 onBackClick = { navController.popBackStack() },
                 onLogoutClick = {
                     authViewModel.logout()
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(0) { inclusive = true }
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = true }
                     }
                 },
                 onEditProfileClick = {
-                    navController.navigate(Screen.EditProfile.route)
+                    navController.navigate(Screen.EditProfile)
                 }
             )
         }
 
-        composable(Screen.EditProfile.route) {
+        composable<Screen.EditProfile> {
             val editViewModel: EditProfileViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
