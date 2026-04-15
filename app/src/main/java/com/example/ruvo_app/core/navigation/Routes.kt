@@ -14,4 +14,5 @@ sealed interface Screen {
     @Serializable object Settings : Screen
     @Serializable object EditProfile : Screen
     @Serializable object ModeratorDashboard : Screen
+    @Serializable object CrearServicio : Screen
 }

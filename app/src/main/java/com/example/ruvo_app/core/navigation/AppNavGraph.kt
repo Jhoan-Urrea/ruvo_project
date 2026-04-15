@@ -27,6 +27,7 @@ import com.example.ruvo_app.features.register.RegisterScreen
 import com.example.ruvo_app.features.settings.EditProfileScreen
 import com.example.ruvo_app.features.settings.EditProfileViewModel
 import com.example.ruvo_app.features.settings.SettingsScreen
+import com.example.ruvo_app.features.service.CrearServicioScreen
 
 @Composable
 fun AppNavGraph(authViewModel: AuthViewModel) {
@@ -110,6 +111,7 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             DashboardScreen(
                 onLogout = { authViewModel.logout() },
                 onSettingsClick = { navController.navigate(Screen.Settings) },
+                onAddPostClick = { navController.navigate(Screen.CrearServicio) },
                 onAdminDetailedClick = { navController.navigate(Screen.ModeratorDashboard) },
                 isAdmin = state?.user?.role == UserRole.MODERATOR
             )
@@ -149,6 +151,12 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             EditProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 viewModel = editViewModel
+            )
+        }
+
+        composable<Screen.CrearServicio> {
+            CrearServicioScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
     }
