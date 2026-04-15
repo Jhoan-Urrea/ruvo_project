@@ -50,32 +50,32 @@ fun LoginScreen(
                 .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
-            // Logo RUVO (Usa el recurso XML disponible)
+            // Logo RUVO
             Image(
                 painter = painterResource(id = R.drawable.logo_ruvo),
                 contentDescription = "RUVO Logo",
-                modifier = Modifier.size(140.dp),
+                modifier = Modifier.size(120.dp),
                 contentScale = ContentScale.Fit
             )
             
             Text(
                 text = "RUVO",
                 style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 4.sp
                 ),
                 color = Color.Black
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             Text(
                 text = "Iniciar sesión",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp
+                    fontSize = 26.sp
                 ),
                 color = Color.Black,
                 textAlign = TextAlign.Center
@@ -95,10 +95,10 @@ fun LoginScreen(
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Black,
-                    unfocusedBorderColor = Color.Gray,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedContainerColor = Color(0xFFF8F9FA),
+                    unfocusedContainerColor = Color(0xFFF8F9FA)
                 )
             )
 
@@ -124,29 +124,48 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Black,
-                    unfocusedBorderColor = Color.Gray,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedContainerColor = Color(0xFFF8F9FA),
+                    unfocusedContainerColor = Color(0xFFF8F9FA)
                 )
             )
 
-            TextButton(
-                onClick = onForgotPasswordClick,
-                modifier = Modifier.padding(top = 8.dp)
+            // Olvidé mi contraseña alineado a la derecha
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
+                TextButton(
+                    onClick = onForgotPasswordClick
+                ) {
+                    Text(
+                        text = "Olvidé mi contraseña",
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Mensaje de Error
+            if (uiState.error != null) {
                 Text(
-                    text = "Olvide mi contraseña",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
+                    text = uiState.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    textAlign = TextAlign.Center
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Botón Ingresar
             Button(
                 onClick = { viewModel.onLoginClicked(onLoginSuccess) },
+                enabled = !uiState.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -154,63 +173,21 @@ fun LoginScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
             ) {
-                Text(
-                    text = "Ingresar",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
                     )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Separador "O Conecta con"
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray)
-                Text(
-                    text = "o",
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray)
-            }
-            
-            Text(
-                text = "Conecta con",
-                color = Color.Gray,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Botones Redes Sociales
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { /* Facebook Login */ }) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Facebook",
-                        modifier = Modifier.size(40.dp),
-                        tint = Color(0xFF1877F2)
-                    )
-                }
-                Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.LightGray))
-                IconButton(onClick = { /* Google Login */ }) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Google",
-                        modifier = Modifier.size(40.dp),
-                        tint = Color(0xFFEA4335)
+                } else {
+                    Text(
+                        text = "Ingresar",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     )
                 }
             }
@@ -222,22 +199,20 @@ fun LoginScreen(
                 onClick = onBackClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(bottom = 16.dp),
+                    .height(56.dp),
                 shape = RoundedCornerShape(28.dp),
-                border = BorderStroke(1.dp, Color.Gray),
+                border = BorderStroke(1.dp, Color.LightGray),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
             ) {
                 Text(
                     text = "Regresar",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 18.sp,
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold
                     )
                 )
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
