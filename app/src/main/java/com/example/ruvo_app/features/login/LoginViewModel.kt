@@ -39,7 +39,11 @@ class LoginViewModel(
             result.onSuccess {
                 onSuccess()
             }.onFailure { e ->
-                _uiState.update { it.copy(error = e.message ?: "Error al iniciar sesión") }
+                val errorMessage = when (e) {
+                    is com.example.ruvo_app.domain.util.AuthError -> e.message
+                    else -> "Error al iniciar sesión. Inténtalo de nuevo."
+                }
+                _uiState.update { it.copy(error = errorMessage) }
             }
         }
     }
