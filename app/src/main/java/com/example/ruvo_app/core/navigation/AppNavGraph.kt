@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.ruvo_app.data.repository.AuthRepositoryImpl
 import com.example.ruvo_app.data.repository.UserRepositoryImpl
 import com.example.ruvo_app.domain.model.UserRole
@@ -28,6 +29,7 @@ import com.example.ruvo_app.features.settings.EditProfileScreen
 import com.example.ruvo_app.features.settings.EditProfileViewModel
 import com.example.ruvo_app.features.settings.SettingsScreen
 import com.example.ruvo_app.features.service.CrearServicioScreen
+import com.example.ruvo_app.features.service.DetalleServicioScreen
 
 @Composable
 fun AppNavGraph(authViewModel: AuthViewModel) {
@@ -113,6 +115,9 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                 onSettingsClick = { navController.navigate(Screen.Settings) },
                 onAddPostClick = { navController.navigate(Screen.CrearServicio) },
                 onAdminDetailedClick = { navController.navigate(Screen.ModeratorDashboard) },
+                onServiceClick = { service -> 
+                    navController.navigate(service)
+                },
                 isAdmin = state?.user?.role == UserRole.MODERATOR
             )
         }
@@ -156,6 +161,14 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
 
         composable<Screen.CrearServicio> {
             CrearServicioScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable<Screen.DetalleServicio> { backStackEntry ->
+            val serviceDetail: Screen.DetalleServicio = backStackEntry.toRoute()
+            DetalleServicioScreen(
+                service = serviceDetail,
                 onBackClick = { navController.popBackStack() }
             )
         }
