@@ -80,9 +80,21 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         composable<Screen.ForgotPassword> {
+            val forgotPasswordViewModel: com.example.ruvo_app.features.login.ForgotPasswordViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        val authRepository = AuthRepositoryImpl(userRepository = UserRepositoryImpl())
+                        return com.example.ruvo_app.features.login.ForgotPasswordViewModel(
+                            com.example.ruvo_app.domain.usecase.ResetPasswordUseCase(authRepository)
+                        ) as T
+                    }
+                }
+            )
             ForgotPasswordScreen(
                 onBackClick = { navController.popBackStack() },
-                onCodeSent = { navController.navigate(Screen.ResetPassword) }
+                onCodeSent = { navController.navigate(Screen.ResetPassword) },
+                viewModel = forgotPasswordViewModel
             )
         }
 
