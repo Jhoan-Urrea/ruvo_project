@@ -319,8 +319,12 @@ fun HomeContent(
                                     category = service.category,
                                     location = service.location,
                                     priceRange = service.priceRange,
-                                    userName = service.userName,
-                                    userSpecialty = service.userSpecialty,
+                                    providerId = "1", // Mock ID
+                                    providerName = service.userName,
+                                    providerSpecialty = service.userSpecialty,
+                                    providerImageRes = R.drawable.isotipo,
+                                    rating = 4.5f,
+                                    reviewsCount = 10,
                                     imageRes = service.imageRes
                                 )
                             )

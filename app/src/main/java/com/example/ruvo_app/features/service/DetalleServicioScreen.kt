@@ -26,14 +26,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
+import com.example.ruvo_app.core.theme.Ruvo_appTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleServicioScreen(
     service: Screen.DetalleServicio,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onViewProfileClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -204,20 +207,21 @@ fun DetalleServicioScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.isotipo), // Placeholder
+                        painter = painterResource(id = service.providerImageRes),
                         contentDescription = null,
                         modifier = Modifier
                             .size(50.dp)
                             .clip(CircleShape)
-                            .background(Color.LightGray)
+                            .background(Color.LightGray),
+                        contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = service.userName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(text = service.userSpecialty, fontSize = 14.sp, color = Color.Gray)
+                        Text(text = service.providerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(text = service.providerSpecialty, fontSize = 14.sp, color = Color.Gray)
                     }
                     OutlinedButton(
-                        onClick = { /* TODO: Ver perfil */ },
+                        onClick = onViewProfileClick,
                         shape = RoundedCornerShape(20.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp)
                     ) {
@@ -297,5 +301,31 @@ fun DetalleServicioScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DetalleServicioScreenPreview() {
+    Ruvo_appTheme {
+        DetalleServicioScreen(
+            service = Screen.DetalleServicio(
+                id = "1",
+                title = "Plomero Profesional",
+                description = "Servicio de plomería urgente 24/7. Reparación de fugas, instalación de tuberías y más.",
+                category = "Hogar",
+                location = "Medellín, Antioquia",
+                priceRange = "$ 50.000 - $120.000",
+                providerId = "p1",
+                providerName = "Andrés López",
+                providerSpecialty = "Plomero certificado",
+                providerImageRes = R.drawable.isotipo,
+                rating = 4.8f,
+                reviewsCount = 15,
+                imageRes = R.drawable.plomero
+            ),
+            onBackClick = {},
+            onViewProfileClick = {}
+        )
     }
 }

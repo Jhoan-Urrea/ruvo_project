@@ -28,6 +28,8 @@ import com.example.ruvo_app.features.register.RegisterScreen
 import com.example.ruvo_app.features.settings.EditProfileScreen
 import com.example.ruvo_app.features.settings.EditProfileViewModel
 import com.example.ruvo_app.features.settings.SettingsScreen
+import com.example.ruvo_app.features.profile.ProviderProfileScreen
+import com.example.ruvo_app.features.chat.ChatScreen
 import com.example.ruvo_app.features.service.CrearServicioScreen
 import com.example.ruvo_app.features.service.DetalleServicioScreen
 
@@ -181,7 +183,48 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             val serviceDetail: Screen.DetalleServicio = backStackEntry.toRoute()
             DetalleServicioScreen(
                 service = serviceDetail,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onViewProfileClick = {
+                    navController.navigate(
+                        Screen.PerfilProveedor(
+                            providerId = serviceDetail.providerId,
+                            name = serviceDetail.providerName,
+                            specialty = "Especialista", // Podría venir del modelo si existiera
+                            rating = serviceDetail.rating,
+                            reviewsCount = serviceDetail.reviewsCount,
+                            location = serviceDetail.location,
+                            imageRes = serviceDetail.providerImageRes
+                        )
+                    )
+                }
+            )
+        }
+
+        composable<Screen.PerfilProveedor> { backStackEntry ->
+            val profileData: Screen.PerfilProveedor = backStackEntry.toRoute()
+            ProviderProfileScreen(
+                profileData = profileData,
+                onBackClick = { navController.popBackStack() },
+                onContactClick = {
+                    navController.navigate(
+                        Screen.Chat(
+                            providerId = profileData.providerId,
+                            providerName = profileData.name,
+                            providerSpecialty = profileData.specialty,
+                            providerImageRes = profileData.imageRes,
+                            serviceTitle = "Solicitud de Servicio",
+                            serviceDescription = "Interés en contactar desde el perfil."
+                        )
+                    )
+                }
+            )
+        }
+
+        composable<Screen.Chat> { backStackEntry ->
+            val chatData: Screen.Chat = backStackEntry.toRoute()
+            ChatScreen(
+                chatData = chatData,
+                onBack = { navController.popBackStack() }
             )
         }
     }

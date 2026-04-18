@@ -199,8 +199,12 @@ fun SearchScreen(
                                 category = service.category,
                                 location = service.location,
                                 priceRange = service.priceRange,
-                                userName = service.userName,
-                                userSpecialty = service.userSpecialty,
+                                providerId = "PROV-${service.id}",
+                                providerName = service.userName,
+                                providerSpecialty = service.userSpecialty,
+                                providerImageRes = service.imageRes,
+                                rating = 4.8f,
+                                reviewsCount = 12,
                                 imageRes = service.imageRes
                             )
                         )
