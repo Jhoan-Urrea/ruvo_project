@@ -30,6 +30,7 @@ import com.example.ruvo_app.features.settings.EditProfileViewModel
 import com.example.ruvo_app.features.settings.SettingsScreen
 import com.example.ruvo_app.features.profile.ProviderProfileScreen
 import com.example.ruvo_app.features.chat.ChatScreen
+import com.example.ruvo_app.features.request.SolicitarServicioScreen
 import com.example.ruvo_app.features.service.CrearServicioScreen
 import com.example.ruvo_app.features.service.DetalleServicioScreen
 
@@ -38,8 +39,8 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
     val navController = rememberNavController()
     val authState by authViewModel.uiState.collectAsState()
 
-    val startDestination = when (authState) {
-        is AuthUiState.Authenticated -> Screen.Dashboard
+    val startDestination: Screen = when (authState) {
+        is AuthUiState.Authenticated -> Screen.Dashboard()
         else -> Screen.Home
     }
 
@@ -73,7 +74,7 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                 onBackClick = { navController.popBackStack() },
                 onForgotPasswordClick = { navController.navigate(Screen.ForgotPassword) },
                 onLoginSuccess = {
-                    navController.navigate(Screen.Dashboard) {
+                    navController.navigate(Screen.Dashboard()) {
                         popUpTo(Screen.Home) { inclusive = true }
                     }
                 },
@@ -122,7 +123,8 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             )
         }
 
-        composable<Screen.Dashboard> {
+        composable<Screen.Dashboard> { backStackEntry ->
+            val dashboardData: Screen.Dashboard = backStackEntry.toRoute()
             val state = authState as? AuthUiState.Authenticated
             DashboardScreen(
                 onLogout = { authViewModel.logout() },
@@ -132,7 +134,8 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                 onServiceClick = { service -> 
                     navController.navigate(service)
                 },
-                isAdmin = state?.user?.role == UserRole.MODERATOR
+                isAdmin = state?.user?.role == UserRole.MODERATOR,
+                initialSuccessMessage = dashboardData.successMessage
             )
         }
 
@@ -189,13 +192,29 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                         Screen.PerfilProveedor(
                             providerId = serviceDetail.providerId,
                             name = serviceDetail.providerName,
-                            specialty = "Especialista", // Podría venir del modelo si existiera
+                            specialty = "Especialista",
                             rating = serviceDetail.rating,
                             reviewsCount = serviceDetail.reviewsCount,
                             location = serviceDetail.location,
                             imageRes = serviceDetail.providerImageRes
                         )
                     )
+                },
+                onSolicitarClick = { solicitarData ->
+                    navController.navigate(solicitarData)
+                }
+            )
+        }
+
+        composable<Screen.SolicitarServicio> { backStackEntry ->
+            val solicitarData: Screen.SolicitarServicio = backStackEntry.toRoute()
+            SolicitarServicioScreen(
+                data = solicitarData,
+                onBack = { navController.popBackStack() },
+                onSendSuccess = {
+                    navController.navigate(Screen.Dashboard(successMessage = "Solicitud enviada exitosamente")) {
+                        popUpTo<Screen.Dashboard> { inclusive = true }
+                    }
                 }
             )
         }

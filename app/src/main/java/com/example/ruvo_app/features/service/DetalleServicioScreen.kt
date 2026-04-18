@@ -36,7 +36,8 @@ import com.example.ruvo_app.core.theme.Ruvo_appTheme
 fun DetalleServicioScreen(
     service: Screen.DetalleServicio,
     onBackClick: () -> Unit,
-    onViewProfileClick: () -> Unit
+    onViewProfileClick: () -> Unit,
+    onSolicitarClick: (Screen.SolicitarServicio) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -248,7 +249,21 @@ fun DetalleServicioScreen(
                     }
 
                     Button(
-                        onClick = { /* TODO: Solicitar */ },
+                        onClick = {
+                            onSolicitarClick(
+                                Screen.SolicitarServicio(
+                                    serviceId = service.id,
+                                    serviceTitle = service.title,
+                                    serviceCategory = service.category,
+                                    servicePriceRange = service.priceRange,
+                                    serviceImageRes = service.imageRes,
+                                    providerName = service.providerName,
+                                    providerSpecialty = service.providerSpecialty,
+                                    providerImageRes = service.providerImageRes,
+                                    location = service.location
+                                )
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF))
@@ -325,7 +340,8 @@ fun DetalleServicioScreenPreview() {
                 imageRes = R.drawable.plomero
             ),
             onBackClick = {},
-            onViewProfileClick = {}
+            onViewProfileClick = {},
+            onSolicitarClick = {}
         )
     }
 }

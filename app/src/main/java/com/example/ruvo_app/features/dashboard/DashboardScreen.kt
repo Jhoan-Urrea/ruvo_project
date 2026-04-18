@@ -45,13 +45,23 @@ fun DashboardScreen(
     onAddPostClick: () -> Unit = {},
     onAdminDetailedClick: () -> Unit = {},
     onServiceClick: (Screen.DetalleServicio) -> Unit = {},
-    isAdmin: Boolean = false
+    isAdmin: Boolean = false,
+    initialSuccessMessage: String? = null
 ) {
     var selectedCategory by remember { mutableStateOf("Todo") }
-    // Normalizamos los índices: 0: Inicio, 1: Buscar, 2: Notificaciones, 3: Perfil
     var selectedTab by remember { mutableIntStateOf(0) }
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Mostrar mensaje de éxito si existe
+    LaunchedEffect(initialSuccessMessage) {
+        initialSuccessMessage?.let {
+            snackbarHostState.showSnackbar(it)
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (selectedTab == 0) {
                 TopAppBar(

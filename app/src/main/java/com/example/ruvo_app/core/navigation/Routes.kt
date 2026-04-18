@@ -9,7 +9,7 @@ sealed interface Screen {
     @Serializable object Register : Screen
     @Serializable object ForgotPassword : Screen
     @Serializable object ResetPassword : Screen
-    @Serializable object Dashboard : Screen
+    @Serializable data class Dashboard(val successMessage: String? = null) : Screen
     @Serializable object Search : Screen
     @Serializable object Profile : Screen
     @Serializable object Settings : Screen
@@ -47,5 +47,16 @@ sealed interface Screen {
         val rating: Float = 0f,
         val reviewsCount: Int = 0,
         val imageRes: Int
+    ) : Screen
+    @Serializable data class SolicitarServicio(
+        val serviceId: String,
+        val serviceTitle: String,
+        val serviceCategory: String,
+        val servicePriceRange: String,
+        val serviceImageRes: Int,
+        val providerName: String,
+        val providerSpecialty: String,
+        val providerImageRes: Int,
+        val location: String
     ) : Screen
 }
