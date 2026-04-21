@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -78,7 +79,7 @@ fun DashboardScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "RUVO",
+                                text = stringResource(R.string.dashboard_title),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 2.sp
@@ -101,7 +102,7 @@ fun DashboardScreen(
                         IconButton(onClick = { /* TODO: Mensajería */ }) {
                             Icon(
                                 imageVector = Icons.Outlined.ChatBubbleOutline,
-                                contentDescription = "Mensajes",
+                                contentDescription = stringResource(R.string.dashboard_messages),
                                 tint = Color.Black
                             )
                         }
@@ -235,7 +236,7 @@ fun HomeContent(
             Column(modifier = Modifier.background(Color.White)) {
                 // Categorías
                 Text(
-                    text = "Categorías",
+                    text = stringResource(R.string.dashboard_categories),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
@@ -357,7 +358,7 @@ fun HomeContent(
                 .padding(16.dp)
                 .size(64.dp)
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Crear", modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_create), modifier = Modifier.size(32.dp))
         }
     }
 }
@@ -415,7 +416,7 @@ fun ServiceCard(service: Service, onClick: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Color.White, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Destacado",
+                            text = stringResource(R.string.dashboard_featured),
                             fontSize = 12.sp,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -443,7 +444,7 @@ fun ServiceCard(service: Service, onClick: () -> Unit) {
                         color = Color(0xFFE0F7E9)
                     ) {
                         Text(
-                            text = "Verificado",
+                            text = stringResource(R.string.dashboard_verified),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             fontSize = 10.sp,
                             color = Color(0xFF2ECC71),
@@ -567,10 +568,10 @@ fun BottomNavigationBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
         modifier = Modifier.height(80.dp) 
     ) {
         val items = listOf(
-            NavigationItem("Inicio", Icons.Default.Home, Icons.Outlined.Home),
-            NavigationItem("Buscar", Icons.Default.Search, Icons.Outlined.Search),
-            NavigationItem("Notificaciones", Icons.Default.Notifications, Icons.Outlined.Notifications),
-            NavigationItem("Perfil", Icons.Default.Person, Icons.Outlined.Person)
+            NavigationItem(stringResource(R.string.nav_home), Icons.Default.Home, Icons.Outlined.Home),
+            NavigationItem(stringResource(R.string.nav_search), Icons.Default.Search, Icons.Outlined.Search),
+            NavigationItem(stringResource(R.string.nav_notifications), Icons.Default.Notifications, Icons.Outlined.Notifications),
+            NavigationItem(stringResource(R.string.nav_profile), Icons.Default.Person, Icons.Outlined.Person)
         )
 
         items.forEachIndexed { index, item ->

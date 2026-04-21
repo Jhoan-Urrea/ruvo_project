@@ -1,3 +1,66 @@
 <resources>
-    <string name="app_name">Ruvo</string>
+    <string name="app_name">Ruvo App</string>
+
+    <!-- Auth -->
+    <string name="login_title">Bienvenido a Ruvo</string>
+    <string name="login_email_hint">Correo electrónico</string>
+    <string name="login_password_hint">Contraseña</string>
+    <string name="login_button">Iniciar Sesión</string>
+    <string name="login_no_account">¿No tienes cuenta? Regístrate</string>
+    <string name="error_required_fields">Por favor, completa todos los campos</string>
+    <string name="error_invalid_credentials">Credenciales incorrectas</string>
+    <string name="register_title">Crear Cuenta</string>
+    <string name="register_button">Registrarse</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_welcome">Hola, ¿qué necesitas hoy?</string>
+    <string name="dashboard_categories">Categorías</string>
+    <string name="dashboard_recent_services">Servicios Recientes</string>
+    <string name="dashboard_search_hint">Buscar servicios...</string>
+    <string name="dashboard_title">RUVO</string>
+    <string name="dashboard_messages">Mensajes</string>
+    <string name="dashboard_all">Todo</string>
+    <string name="dashboard_featured">Destacado</string>
+    <string name="dashboard_verified">Verificado</string>
+    <string name="dashboard_create">Crear</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Mi perfil</string>
+    <string name="profile_edit">Editar Perfil</string>
+    <string name="profile_sign_out">Cerrar Sesión</string>
+    <string name="profile_history">Historial de Servicios</string>
+    <string name="profile_settings">Ajustes</string>
+    <string name="profile_level">Nivel</string>
+    <string name="profile_points">puntos</string>
+    <string name="profile_total_services">Servicios totales</string>
+    <string name="profile_votes">Votos recibidos</string>
+    <string name="profile_service_status">Estado de servicios</string>
+    <string name="profile_active">Activos</string>
+    <string name="profile_pending">Pendientes de verificación</string>
+    <string name="profile_finished">Finalizados</string>
+    <string name="profile_achievements">Logros e insignias</string>
+    <string name="profile_my_services">Mis Servicios</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notificaciones</string>
+    <string name="notifications_unread_count">Tienes %1$d notificaciones sin leer</string>
+    <string name="notifications_mark_all_read">Marcar todas como leídas</string>
+    <string name="notifications_empty">No tienes notificaciones pendientes</string>
+    <string name="notification_new_service">Nuevo servicio en tu zona</string>
+    <string name="notification_new_service_desc">Se publican más servicios locales sobre Tutorías</string>
+    <string name="notification_new_comment">Nuevo comentario</string>
+    <string name="notification_new_comment_desc">%1$s comentó en tu publicación</string>
+    <string name="notification_service_verified">Nuevo servicio verificado</string>
+    <string name="notification_service_verified_desc">Tu servicio como \"%1$s\" ha sido verificado</string>
+    <string name="notification_achievement">Nuevo logro desbloqueado</string>
+    <string name="notification_achievement_desc">Has alcanzado el nivel %1$s</string>
+    <string name="notification_time_ago">Hace %1$s</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_search">Buscar</string>
+    <string name="nav_notifications">Notificaciones</string>
+    <string name="nav_profile">Perfil</string>
+    <string name="loading">Cargando...</string>
+    <string name="retry">Reintentar</string>
 </resources>

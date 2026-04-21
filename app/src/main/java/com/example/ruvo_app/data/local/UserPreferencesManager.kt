@@ -6,8 +6,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
 
@@ -17,7 +20,10 @@ data class UserPreferences(
     val role: String?
 )
 
-class UserPreferencesManager(private val context: Context) {
+@Singleton
+class UserPreferencesManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
     companion object {
         private val USER_UID = stringPreferencesKey("user_uid")
         private val USER_EMAIL = stringPreferencesKey("user_email")

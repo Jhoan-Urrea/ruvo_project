@@ -5,7 +5,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -31,6 +31,7 @@ import com.example.ruvo_app.features.settings.SettingsScreen
 import com.example.ruvo_app.features.profile.ProviderProfileScreen
 import com.example.ruvo_app.features.chat.ChatScreen
 import com.example.ruvo_app.features.request.SolicitarServicioScreen
+import com.example.ruvo_app.features.notifications.NotificationsScreen
 import com.example.ruvo_app.features.service.CrearServicioScreen
 import com.example.ruvo_app.features.service.DetalleServicioScreen
 
@@ -60,16 +61,7 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         composable<Screen.Login> {
-            val loginViewModel: com.example.ruvo_app.features.login.LoginViewModel = viewModel(
-                factory = object : ViewModelProvider.Factory {
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        return com.example.ruvo_app.features.login.LoginViewModel(
-                            LoginUseCase(AuthRepositoryImpl(userRepository = UserRepositoryImpl()))
-                        ) as T
-                    }
-                }
-            )
+            val loginViewModel: com.example.ruvo_app.features.login.LoginViewModel = hiltViewModel()
             LoginScreen(
                 onBackClick = { navController.popBackStack() },
                 onForgotPasswordClick = { navController.navigate(Screen.ForgotPassword) },
@@ -83,17 +75,7 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         composable<Screen.ForgotPassword> {
-            val forgotPasswordViewModel: com.example.ruvo_app.features.login.ForgotPasswordViewModel = viewModel(
-                factory = object : ViewModelProvider.Factory {
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        val authRepository = AuthRepositoryImpl(userRepository = UserRepositoryImpl())
-                        return com.example.ruvo_app.features.login.ForgotPasswordViewModel(
-                            com.example.ruvo_app.domain.usecase.ResetPasswordUseCase(authRepository)
-                        ) as T
-                    }
-                }
-            )
+            val forgotPasswordViewModel: com.example.ruvo_app.features.login.ForgotPasswordViewModel = hiltViewModel()
             ForgotPasswordScreen(
                 onBackClick = { navController.popBackStack() },
                 onCodeSent = { navController.navigate(Screen.ResetPassword) },
@@ -161,15 +143,12 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             )
         }
 
+        composable<Screen.Notifications> {
+            NotificationsScreen()
+        }
+
         composable<Screen.EditProfile> {
-            val editViewModel: EditProfileViewModel = viewModel(
-                factory = object : ViewModelProvider.Factory {
-                    @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        return EditProfileViewModel(UpdateUserProfileUseCase(UserRepositoryImpl())) as T
-                    }
-                }
-            )
+            val editViewModel: EditProfileViewModel = hiltViewModel()
             EditProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 viewModel = editViewModel
