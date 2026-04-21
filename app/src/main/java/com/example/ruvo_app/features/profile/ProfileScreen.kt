@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,13 +44,7 @@ import com.example.ruvo_app.domain.model.User
 @Composable
 fun ProfileScreen(
     onSettingsClick: () -> Unit = {},
-    viewModel: ProfileViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ProfileViewModel(UserRepositoryImpl()) as T
-            }
-        }
-    )
+    viewModel: ProfileViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
@@ -121,14 +116,14 @@ fun ProfileContent(
                 ) {
                     Spacer(modifier = Modifier.width(48.dp))
                     Text(
-                        text = "Mi perfil",
+                        text = stringResource(R.string.profile_title),
                         style = MaterialTheme.typography.titleLarge.copy(
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     )
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.profile_settings), tint = Color.White)
                     }
                 }
 
@@ -199,12 +194,12 @@ fun ProfileContent(
                             Text(text = "🏆", fontSize = 18.sp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Nivel: ${user.reputation.level.name.lowercase().capitalize()}",
+                                text = "${stringResource(R.string.profile_level)}: ${user.reputation.level.name.lowercase().capitalize()}",
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                             )
                         }
                         Text(
-                            text = "${user.reputation.points} puntos",
+                            text = "${user.reputation.points} ${stringResource(R.string.profile_points)}",
                             style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
                         )
                     }
@@ -228,27 +223,27 @@ fun ProfileContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                StatItem(icon = Icons.Outlined.ChatBubbleOutline, count = "${user.stats.activePosts + user.stats.finishedPosts}", label = "Servicios totales", iconColor = Color(0xFF4CAF50))
-                StatItem(icon = Icons.Outlined.FavoriteBorder, count = "0", label = "Votos recibidos", iconColor = Color(0xFFE91E63))
+                StatItem(icon = Icons.Outlined.ChatBubbleOutline, count = "${user.stats.activePosts + user.stats.finishedPosts}", label = stringResource(R.string.profile_total_services), iconColor = Color(0xFF4CAF50))
+                StatItem(icon = Icons.Outlined.FavoriteBorder, count = "0", label = stringResource(R.string.profile_votes), iconColor = Color(0xFFE91E63))
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // Estado de servicios
             Text(
-                text = "Estado de servicios",
+                text = stringResource(R.string.profile_service_status),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            StatusRow(icon = Icons.Default.CheckCircleOutline, label = "Activos", count = "${user.stats.activePosts}", color = Color(0xFF4CAF50))
-            StatusRow(icon = Icons.Default.AccessTime, label = "Pendientes de verificación", count = "${user.stats.pendingVerification}", color = Color(0xFFFFC107))
-            StatusRow(icon = Icons.Default.Inventory2, label = "Finalizados", count = "${user.stats.finishedPosts}", color = Color(0xFF9C27B0))
+            StatusRow(icon = Icons.Default.CheckCircleOutline, label = stringResource(R.string.profile_active), count = "${user.stats.activePosts}", color = Color(0xFF4CAF50))
+            StatusRow(icon = Icons.Default.AccessTime, label = stringResource(R.string.profile_pending), count = "${user.stats.pendingVerification}", color = Color(0xFFFFC107))
+            StatusRow(icon = Icons.Default.Inventory2, label = stringResource(R.string.profile_finished), count = "${user.stats.finishedPosts}", color = Color(0xFF9C27B0))
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // Logros e insignias
             Text(
-                text = "Logros e insignias",
+                text = stringResource(R.string.profile_achievements),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -264,7 +259,7 @@ fun ProfileContent(
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = "Mis Servicios",
+                text = stringResource(R.string.profile_my_services),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             

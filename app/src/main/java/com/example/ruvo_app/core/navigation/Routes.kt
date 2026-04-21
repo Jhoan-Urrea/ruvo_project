@@ -12,6 +12,7 @@ sealed interface Screen {
     @Serializable data class Dashboard(val successMessage: String? = null) : Screen
     @Serializable object Search : Screen
     @Serializable object Profile : Screen
+    @Serializable object Notifications : Screen
     @Serializable object Settings : Screen
     @Serializable object EditProfile : Screen
     @Serializable data class PerfilProveedor(

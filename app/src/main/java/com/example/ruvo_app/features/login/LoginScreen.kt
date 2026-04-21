@@ -164,7 +164,7 @@ fun LoginScreen(
 
             // Botón Ingresar
             Button(
-                onClick = { viewModel.onLoginClicked(onLoginSuccess) },
+                onClick = { viewModel.login(onLoginSuccess) },
                 enabled = !uiState.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()

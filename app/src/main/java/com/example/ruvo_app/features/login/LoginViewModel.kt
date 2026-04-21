@@ -2,15 +2,20 @@ package com.example.ruvo_app.features.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.ruvo_app.domain.usecase.LoginUseCase
+import com.example.ruvo_app.core.di.AuthUseCases
+import com.example.ruvo_app.data.local.UserPreferencesManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class LoginViewModel(
-    private val loginUseCase: LoginUseCase
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val authUseCases: AuthUseCases,
+    private val userPreferencesManager: UserPreferencesManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -24,28 +29,44 @@ class LoginViewModel(
         _uiState.update { it.copy(password = password, error = null) }
     }
 
-    fun onLoginClicked(onSuccess: () -> Unit) {
+    fun login(onSuccess: () -> Unit) {
         val state = _uiState.value
+        
+        // Validación básica en el ViewModel (Requisito académico)
         if (state.email.isBlank() || state.password.isBlank()) {
-            _uiState.update { it.copy(error = "Por favor, completa todos los campos") }
+            _uiState.update { it.copy(error = "error_required_fields") }
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            val result = loginUseCase(state.email, state.password)
-            _uiState.update { it.copy(isLoading = false) }
-
-            result.onSuccess {
+            
+            // 1. Llamada al Caso de Uso (Firebase Auth)
+            val result = authUseCases.login(state.email, state.password)
+            
+            if (result.isSuccess) {
+                // 2. Persistir sesión en DataStore (Requisito académico)
+                userPreferencesManager.saveUserPreferences(
+                    uid = "logged_in", 
+                    email = state.email, 
+                    role = "USER"
+                )
+                
+                _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 onSuccess()
-            }.onFailure { e ->
-                val errorMessage = when (e) {
-                    is com.example.ruvo_app.domain.util.AuthError -> e.message
-                    else -> "Error al iniciar sesión. Inténtalo de nuevo."
+            } else {
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        error = result.exceptionOrNull()?.message ?: "Error desconocido"
+                    ) 
                 }
-                _uiState.update { it.copy(error = errorMessage) }
             }
         }
+    }
+
+    fun resetState() {
+        _uiState.update { LoginUiState() }
     }
 }
 
@@ -53,5 +74,6 @@ data class LoginUiState(
     val email: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
+    val isSuccess: Boolean = false,
     val error: String? = null
 )

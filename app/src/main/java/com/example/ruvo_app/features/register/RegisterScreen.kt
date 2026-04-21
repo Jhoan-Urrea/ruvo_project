@@ -34,17 +34,7 @@ import com.example.ruvo_app.domain.usecase.RegisterUseCase
 fun RegisterScreen(
     onBackClick: () -> Unit = {},
     onRegisterSuccess: () -> Unit = {},
-    viewModel: RegisterViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return RegisterViewModel(
-                    RegisterUseCase(
-                        AuthRepositoryImpl(userRepository = UserRepositoryImpl())
-                    )
-                ) as T
-            }
-        }
-    )
+    viewModel: RegisterViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }

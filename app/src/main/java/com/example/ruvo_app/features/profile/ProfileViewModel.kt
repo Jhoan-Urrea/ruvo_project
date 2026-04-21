@@ -9,9 +9,13 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class ProfileViewModel(
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val signOutUseCase: SignOutUseCase? = null // Optional for now to avoid breaking existing manual factories
+    private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
@@ -40,7 +44,7 @@ class ProfileViewModel(
 
     fun signOut() {
         viewModelScope.launch {
-            signOutUseCase?.invoke()
+            signOutUseCase.invoke()
             // The AuthViewModel in AppNavGraph should detect the state change and redirect
         }
     }

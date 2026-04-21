@@ -29,42 +29,46 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.ui.res.stringResource
+import com.example.ruvo_app.R
+
 @Composable
 fun NotificationsScreen() {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val notifications = remember {
         mutableStateListOf(
             Notification(
                 id = 1,
-                title = "Nuevo servicio en tu zona",
-                description = "Se publican mas servicios locales sobre Tutorias",
-                time = "Hace 7 horas",
+                title = context.getString(R.string.notification_new_service),
+                description = context.getString(R.string.notification_new_service_desc),
+                time = context.getString(R.string.notification_time_ago, "7 horas"),
                 icon = Icons.Outlined.Notifications,
                 iconBackground = Color(0xFFE8EAF6),
                 isRead = false
             ),
             Notification(
                 id = 2,
-                title = "Nuevo comentario",
-                description = "Maria Gonzales comento en tu publicación",
-                time = "Hace 3 minutos",
+                title = context.getString(R.string.notification_new_comment),
+                description = context.getString(R.string.notification_new_comment_desc, "Maria Gonzales"),
+                time = context.getString(R.string.notification_time_ago, "3 minutos"),
                 icon = Icons.Outlined.ChatBubbleOutline,
                 iconBackground = Color(0xFFE8F5E9),
                 isRead = false
             ),
             Notification(
                 id = 3,
-                title = "Nuevo servicio verificado",
-                description = "Tu servicio como \"Asesor en contabilidad\" ha...",
-                time = "Hace 3 minutos",
+                title = context.getString(R.string.notification_service_verified),
+                description = context.getString(R.string.notification_service_verified_desc, "Asesor en contabilidad"),
+                time = context.getString(R.string.notification_time_ago, "3 minutos"),
                 icon = Icons.Outlined.TaskAlt,
                 iconBackground = Color(0xFFE3F2FD),
                 isRead = false
             ),
             Notification(
                 id = 4,
-                title = "Nuevo logro desbloqueado",
-                description = "Has alcanzado el nivel Intermedio",
-                time = "Hace 3 minutos",
+                title = context.getString(R.string.notification_achievement),
+                description = context.getString(R.string.notification_achievement_desc, "Intermedio"),
+                time = context.getString(R.string.notification_time_ago, "3 minutos"),
                 icon = Icons.Outlined.EmojiEvents,
                 iconBackground = Color(0xFFFFF3E0),
                 isRead = false
@@ -77,11 +81,11 @@ fun NotificationsScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5)) // Background slightly grey as in the image
+            .background(Color(0xFFF5F5F5))
     ) {
         // Header
         Text(
-            text = "Notificaciones",
+            text = stringResource(R.string.notifications_title),
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp
@@ -92,7 +96,7 @@ fun NotificationsScreen() {
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
-        // Sub-header with count and Mark as read
+        // Sub-header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -117,7 +121,7 @@ fun NotificationsScreen() {
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Tienes $unreadCount notificaciones sin leer",
+                        text = stringResource(R.string.notifications_unread_count, unreadCount),
                         color = Color(0xFF3F51B5),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -134,7 +138,7 @@ fun NotificationsScreen() {
                     }
                 }) {
                     Text(
-                        text = "Marcar todas como leidas",
+                        text = stringResource(R.string.notifications_mark_all_read),
                         color = Color(0xFF3F51B5),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
