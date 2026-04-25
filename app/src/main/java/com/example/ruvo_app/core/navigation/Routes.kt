@@ -32,6 +32,7 @@ sealed interface Screen {
         val serviceTitle: String? = null,
         val serviceDescription: String? = null
     ) : Screen
+    @Serializable object ChatList : Screen
     @Serializable object ModeratorDashboard : Screen
     @Serializable object CrearServicio : Screen
     @Serializable data class DetalleServicio(

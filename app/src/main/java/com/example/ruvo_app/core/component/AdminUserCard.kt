@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
@@ -20,12 +21,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ruvo_app.domain.model.AccountStatus
 import com.example.ruvo_app.domain.model.User
+import com.example.ruvo_app.domain.model.UserRole
 
 @Composable
 fun AdminUserCard(
     user: User,
     onView: () -> Unit = {},
-    onBlock: () -> Unit = {}
+    onBlock: () -> Unit = {},
+    onChangeRole: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -71,7 +74,22 @@ fun AdminUserCard(
                         )
                         UserStatusBadge(user.status)
                     }
-                    Text(text = user.email, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = user.email, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = if (user.role == UserRole.MODERATOR) Color(0xFFF3E5F5) else Color(0xFFE3F2FD),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = user.role.name,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (user.role == UserRole.MODERATOR) Color(0xFF7B1FA2) else Color(0xFF1976D2)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -99,7 +117,7 @@ fun AdminUserCard(
             // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
                     onClick = onView,
@@ -107,11 +125,20 @@ fun AdminUserCard(
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Ver Detalles", fontSize = 14.sp)
-                    }
+                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Ver", fontSize = 12.sp)
+                }
+
+                OutlinedButton(
+                    onClick = onChangeRole,
+                    modifier = Modifier.weight(1.2f),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(Icons.Default.ManageAccounts, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(if (user.role == UserRole.USER) "Hacer Admin" else "Quitar Admin", fontSize = 12.sp)
                 }
 
                 Button(
@@ -121,11 +148,9 @@ fun AdminUserCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Bloquear", fontSize = 14.sp)
-                    }
+                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Bloquear", fontSize = 12.sp)
                 }
             }
         }

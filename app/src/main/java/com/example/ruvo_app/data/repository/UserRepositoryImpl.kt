@@ -62,6 +62,7 @@ data class UserDto(
     val fullName: String = "",
     val username: String = "",
     val email: String = "",
+    val phone: String = "",
     val role: String = "USER",
     val points: Int = 0,
     val level: String = "PRINCIPIANTE",
@@ -75,6 +76,7 @@ data class UserDto(
         fullName = fullName,
         username = username,
         email = email,
+        phone = phone,
         role = UserRole.valueOf(role),
         reputation = Reputation(
             points = points,
@@ -93,6 +95,7 @@ data class UserDto(
             fullName = user.fullName,
             username = user.username,
             email = user.email,
+            phone = user.phone,
             role = user.role.name,
             points = user.reputation.points,
             level = user.reputation.level.name,

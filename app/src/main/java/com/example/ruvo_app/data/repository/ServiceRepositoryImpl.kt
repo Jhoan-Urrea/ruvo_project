@@ -1,7 +1,10 @@
 package com.example.ruvo_app.data.repository
 
-import com.example.ruvo_app.domain.model.Service
-import com.example.ruvo_app.domain.model.ServiceStatus
+import com.example.ruvo_app.domain.model.ImageResource
+import com.example.ruvo_app.domain.model.PostStatus
+import com.example.ruvo_app.domain.model.ServiceCategory
+import com.example.ruvo_app.domain.model.ServicePost
+import com.example.ruvo_app.domain.model.GeoPoint
 import com.example.ruvo_app.domain.repository.ServiceRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -16,87 +19,149 @@ class ServiceRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ServiceRepository {
 
-    override suspend fun saveService(service: Service): Result<Unit> {
+    override suspend fun saveServicePost(post: ServicePost): Result<Unit> {
         return try {
-            val docRef = if (service.id.isEmpty()) {
-                firestore.collection("services").document()
+            val docRef = if (post.id.isEmpty()) {
+                firestore.collection("services_posts").document()
             } else {
-                firestore.collection("services").document(service.id)
+                firestore.collection("services_posts").document(post.id)
             }
             
-            val serviceWithId = if (service.id.isEmpty()) service.copy(id = docRef.id) else service
+            val postWithId = if (post.id.isEmpty()) post.copy(id = docRef.id) else post
             
-            docRef.set(ServiceDto.fromDomain(serviceWithId)).await()
+            docRef.set(ServicePostDto.fromDomain(postWithId)).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    override fun getServices(): Flow<List<Service>> = callbackFlow {
-        val subscription = firestore.collection("services")
+    override fun getServicePosts(): Flow<List<ServicePost>> = callbackFlow {
+        val subscription = firestore.collection("services_posts")
+            .whereEqualTo("status", PostStatus.VERIFICADO.name) // Solo verificados
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
                 
-                val services = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(ServiceDto::class.java)?.toDomain(doc.id)
+                val posts = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(ServicePostDto::class.java)?.toDomain(doc.id)
                 } ?: emptyList()
                 
-                trySend(services)
+                trySend(posts)
             }
         awaitClose { subscription.remove() }
     }
+
+    override fun getServicePostsByAuthor(authorId: String): Flow<List<ServicePost>> = callbackFlow {
+        val subscription = firestore.collection("services_posts")
+            .whereEqualTo("authorId", authorId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                
+                val posts = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(ServicePostDto::class.java)?.toDomain(doc.id)
+                } ?: emptyList()
+                
+                trySend(posts)
+            }
+        awaitClose { subscription.remove() }
+    }
+
+    override fun getAllServicePosts(): Flow<List<ServicePost>> = callbackFlow {
+        val subscription = firestore.collection("services_posts")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val posts = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(ServicePostDto::class.java)?.toDomain(doc.id)
+                } ?: emptyList()
+                trySend(posts)
+            }
+        awaitClose { subscription.remove() }
+    }
+
+    override suspend fun updatePostStatus(postId: String, newStatus: PostStatus): Result<Unit> {
+        return try {
+            firestore.collection("services_posts").document(postId)
+                .update("status", newStatus.name)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
-data class ServiceDto(
+data class ServicePostDto(
+    val authorId: String = "",
     val title: String = "",
-    val authorName: String = "",
+    val category: String = "HOGAR",
     val description: String = "",
-    val price: Double = 0.0,
-    val priceUnit: String = "",
-    val rating: Float = 0f,
-    val reviewsCount: Int = 0,
-    val imageUrl: String? = null,
-    val category: String = "",
-    val location: String = "",
-    val date: String = "",
-    val status: String = "ACTIVE"
+    val images: List<ImageResourceDto> = emptyList(),
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val addressText: String = "",
+    val coverageRadius: Double = 0.0,
+    val minPrice: Double = 0.0,
+    val maxPrice: Double = 0.0,
+    val status: String = "PENDIENTE",
+    val rejectionReason: String? = null,
+    val importantCount: Int = 0,
+    val isFeatured: Boolean = false
 ) {
-    fun toDomain(id: String) = Service(
+    fun toDomain(id: String) = ServicePost(
         id = id,
+        authorId = authorId,
         title = title,
-        authorName = authorName,
+        category = try { ServiceCategory.valueOf(category) } catch(e: Exception) { ServiceCategory.HOGAR },
         description = description,
-        price = price,
-        priceUnit = priceUnit,
-        rating = rating,
-        reviewsCount = reviewsCount,
-        imageUrl = imageUrl,
-        category = category,
-        location = location,
-        date = date,
-        status = try { ServiceStatus.valueOf(status) } catch(e: Exception) { ServiceStatus.ACTIVE }
+        images = images.map { it.toDomain() },
+        coordinates = GeoPoint(latitude, longitude),
+        addressText = addressText,
+        coverageRadius = coverageRadius,
+        minPrice = minPrice,
+        maxPrice = maxPrice,
+        status = try { PostStatus.valueOf(status) } catch(e: Exception) { PostStatus.PENDIENTE },
+        rejectionReason = rejectionReason,
+        importantCount = importantCount,
+        isFeatured = isFeatured
     )
 
     companion object {
-        fun fromDomain(service: Service) = ServiceDto.fromDomainInternal(service)
-        
-        private fun fromDomainInternal(service: Service) = ServiceDto(
-            title = service.title,
-            authorName = service.authorName,
-            description = service.description,
-            price = service.price,
-            priceUnit = service.priceUnit,
-            rating = service.rating,
-            reviewsCount = service.reviewsCount,
-            imageUrl = service.imageUrl,
-            category = service.category,
-            location = service.location,
-            date = service.date,
-            status = service.status.name
+        fun fromDomain(post: ServicePost) = ServicePostDto(
+            authorId = post.authorId,
+            title = post.title,
+            category = post.category.name,
+            description = post.description,
+            images = post.images.map { ImageResourceDto.fromDomain(it) },
+            latitude = post.coordinates.latitude,
+            longitude = post.coordinates.longitude,
+            addressText = post.addressText,
+            coverageRadius = post.coverageRadius,
+            minPrice = post.minPrice,
+            maxPrice = post.maxPrice,
+            status = post.status.name,
+            rejectionReason = post.rejectionReason,
+            importantCount = post.importantCount,
+            isFeatured = post.isFeatured
         )
+    }
+}
+
+data class ImageResourceDto(
+    val url: String = "",
+    val publicId: String = "",
+    val isPrimary: Boolean = false
+) {
+    fun toDomain() = ImageResource(url, publicId, isPrimary)
+    companion object {
+        fun fromDomain(res: ImageResource) = ImageResourceDto(res.url, res.publicId, res.isPrimary)
     }
 }

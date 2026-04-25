@@ -3,18 +3,12 @@ package com.example.ruvo_app.core.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.example.ruvo_app.data.repository.AuthRepositoryImpl
-import com.example.ruvo_app.data.repository.UserRepositoryImpl
 import com.example.ruvo_app.domain.model.UserRole
-import com.example.ruvo_app.domain.usecase.LoginUseCase
-import com.example.ruvo_app.domain.usecase.UpdateUserProfileUseCase
 import com.example.ruvo_app.features.auth.AuthUiState
 import com.example.ruvo_app.features.auth.AuthViewModel
 import com.example.ruvo_app.features.dashboard.DashboardScreen
@@ -30,10 +24,12 @@ import com.example.ruvo_app.features.settings.EditProfileViewModel
 import com.example.ruvo_app.features.settings.SettingsScreen
 import com.example.ruvo_app.features.profile.ProviderProfileScreen
 import com.example.ruvo_app.features.chat.ChatScreen
+import com.example.ruvo_app.features.chat.ChatListScreen
 import com.example.ruvo_app.features.request.SolicitarServicioScreen
 import com.example.ruvo_app.features.notifications.NotificationsScreen
 import com.example.ruvo_app.features.service.CrearServicioScreen
 import com.example.ruvo_app.features.service.DetalleServicioScreen
+import com.example.ruvo_app.R
 
 @Composable
 fun AppNavGraph(authViewModel: AuthViewModel) {
@@ -98,8 +94,8 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             RegisterScreen(
                 onBackClick = { navController.popBackStack() },
                 onRegisterSuccess = {
-                    navController.navigate(Screen.Login) {
-                        popUpTo(Screen.AuthSelection) { inclusive = false }
+                    navController.navigate(Screen.Dashboard()) {
+                        popUpTo(Screen.Home) { inclusive = true }
                     }
                 }
             )
@@ -116,8 +112,26 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                 onServiceClick = { service -> 
                     navController.navigate(service)
                 },
+                onChatListClick = { navController.navigate(Screen.ChatList) },
                 isAdmin = state?.user?.role == UserRole.MODERATOR,
                 initialSuccessMessage = dashboardData.successMessage
+            )
+        }
+
+        composable<Screen.ChatList> {
+            ChatListScreen(
+                onBackClick = { navController.popBackStack() },
+                onChatClick = { chatId ->
+                    // Por ahora navegamos a un chat genérico de ejemplo ya que es un mock
+                    navController.navigate(
+                        Screen.Chat(
+                            providerId = chatId,
+                            providerName = "Usuario de Chat",
+                            providerSpecialty = "Especialista",
+                            providerImageRes = R.drawable.isotipo
+                        )
+                    )
+                }
             )
         }
 

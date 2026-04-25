@@ -9,20 +9,29 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,19 +42,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.location.LocationServices
 import android.location.Geocoder
 import java.util.Locale
 import coil.compose.AsyncImage
-import com.cloudinary.android.MediaManager
-import com.cloudinary.android.callback.ErrorInfo
-import com.cloudinary.android.callback.UploadCallback
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearServicioScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: CrearServicioViewModel = hiltViewModel()
 ) {
     var titulo by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("Hogar") }
@@ -55,36 +63,40 @@ fun CrearServicioScreen(
     var ubicacion by remember { mutableStateOf("") }
     var radio by remember { mutableStateOf("5") }
     
-    // 6. Estado de imagen
-    var selectedImage by remember { mutableStateOf<Uri?>(null) }
-    var imageUrl by remember { mutableStateOf("") }
-    var isUploading by remember { mutableStateOf(false) }
+    val uploadedImages by viewModel.uploadedImages.collectAsState()
+    val isUploading by viewModel.isUploading.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+    
+    val titleError by viewModel.titleError.collectAsState()
+    val priceError by viewModel.priceError.collectAsState()
     
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-    // 1. Launcher para abrir la galería
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            selectedImage = it
-            isUploading = true
-            subirImagenCloudinary(it, 
-                onSuccess = { url ->
-                    imageUrl = url
-                    isUploading = false
-                },
-                onError = {
-                    isUploading = false
-                    Toast.makeText(context, "Error al subir imagen", Toast.LENGTH_SHORT).show()
-                }
-            )
+    LaunchedEffect(error) {
+        error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearError()
         }
     }
 
-    // 2. Lógica de Permisos para Galería (según normativa Android 13+)
+    LaunchedEffect(successMessage) {
+        successMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearSuccessMessage()
+            onBackClick()
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.uploadImage(it) }
+    }
+
     val galleryPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_IMAGES
     } else {
@@ -98,7 +110,6 @@ fun CrearServicioScreen(
         else Toast.makeText(context, "Permiso de galería denegado", Toast.LENGTH_SHORT).show()
     }
 
-    // 3. Lógica de Permisos para Ubicación
     val locationPermissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -109,11 +120,18 @@ fun CrearServicioScreen(
                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                     location?.let {
                         val geocoder = Geocoder(context, Locale.getDefault())
-                        val addresses = geocoder.getFromLocation(it.latitude, it.longitude, 1)
-                        if (!addresses.isNullOrEmpty()) {
-                            val address = addresses[0].getAddressLine(0)
-                            ubicacion = address
-                            Toast.makeText(context, "Ubicación cargada", Toast.LENGTH_SHORT).show()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            geocoder.getFromLocation(it.latitude, it.longitude, 1) { addresses ->
+                                if (addresses.isNotEmpty()) {
+                                    ubicacion = addresses[0].getAddressLine(0)
+                                }
+                            }
+                        } else {
+                            @Suppress("DEPRECATION")
+                            val addresses = geocoder.getFromLocation(it.latitude, it.longitude, 1)
+                            if (!addresses.isNullOrEmpty()) {
+                                ubicacion = addresses[0].getAddressLine(0)
+                            }
                         }
                     }
                 }
@@ -123,20 +141,6 @@ fun CrearServicioScreen(
         } else {
             Toast.makeText(context, "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    // 4. Lógica de Permisos para Cámara (si decides usarla)
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        // Manejar el bitmap capturado
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) cameraLauncher.launch(null)
-        else Toast.makeText(context, "Permiso de cámara denegado", Toast.LENGTH_SHORT).show()
     }
 
     Scaffold(
@@ -154,23 +158,33 @@ fun CrearServicioScreen(
         bottomBar = {
             Button(
                 onClick = { 
-                    if (imageUrl.isNotEmpty()) {
-                        Toast.makeText(context, "Servicio publicado!", Toast.LENGTH_SHORT).show()
-                        onBackClick()
-                    } else if (isUploading) {
-                        Toast.makeText(context, "Subiendo imagen, espera un momento...", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Por favor sube una imagen primero", Toast.LENGTH_SHORT).show()
+                    val min = precioMin.toDoubleOrNull() ?: 0.0
+                    val max = precioMax.toDoubleOrNull() ?: 0.0
+                    val rad = radio.toDoubleOrNull() ?: 5.0
+                    
+                    if (titulo.isBlank() || descripcion.isBlank() || ubicacion.isBlank()) {
+                        Toast.makeText(context, "Por favor completa los campos obligatorios", Toast.LENGTH_SHORT).show()
+                        return@Button
                     }
+
+                    viewModel.saveServicePost(
+                        titulo, categoria, descripcion, min, max, ubicacion, rad,
+                        onSuccess = { /* Handled by LaunchedEffect */ }
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
                     .height(56.dp),
                 shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF)),
+                enabled = !isSaving && !isUploading
             ) {
-                Text("Publicar servicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                } else {
+                    Text("Publicar servicio", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     ) { padding ->
@@ -184,10 +198,15 @@ fun CrearServicioScreen(
             FieldLabel("Titulo del servicio *")
             OutlinedTextField(
                 value = titulo,
-                onValueChange = { titulo = it },
+                onValueChange = { 
+                    titulo = it
+                    viewModel.onTitleChanged(it)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Ej. Plomero profesional") },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                isError = titleError != null,
+                supportingText = { titleError?.let { Text(it) } }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -204,7 +223,7 @@ fun CrearServicioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            FieldLabel("Descipción *")
+            FieldLabel("Descripción *")
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { if (it.length <= 500) descripcion = it },
@@ -222,21 +241,39 @@ fun CrearServicioScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = precioMin,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) precioMin = it },
+                    onValueChange = { 
+                        if (it.all { char -> char.isDigit() }) {
+                            precioMin = it
+                            viewModel.onPricesChanged(it, precioMax)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("$ Mínimo") },
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(20.dp)) }
+                    isError = priceError != null
                 )
                 OutlinedTextField(
                     value = precioMax,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) precioMax = it },
+                    onValueChange = { 
+                        if (it.all { char -> char.isDigit() }) {
+                            precioMax = it
+                            viewModel.onPricesChanged(precioMin, it)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("$ Máximo") },
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(20.dp)) }
+                    isError = priceError != null
+                )
+            }
+            priceError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
 
@@ -252,7 +289,7 @@ fun CrearServicioScreen(
                 shape = RoundedCornerShape(12.dp)
             )
             Text(
-                "Usar mi dirección acctual", 
+                "Usar mi dirección actual", 
                 color = Color(0xFF0047FF), 
                 fontSize = 12.sp, 
                 modifier = Modifier
@@ -275,85 +312,90 @@ fun CrearServicioScreen(
                 onValueChange = { if (it.all { char -> char.isDigit() }) radio = it },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null) }
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
-            Text("¿Hasta qué distancia te desplazas?", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            FieldLabel("Imágenes del servicio")
+            FieldLabel("Imágenes del servicio (Mín. 1, Máx. 3) *")
+            Text("Toca una imagen para seleccionarla como principal", fontSize = 12.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(8.dp))
             
-            // 11. Comportamiento UI (Botón vs Preview)
-            if (selectedImage == null) {
-                Card(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clickable { 
-                            val status = ContextCompat.checkSelfPermission(context, galleryPermission)
-                            if (status == PackageManager.PERMISSION_GRANTED) {
-                                galleryLauncher.launch("image/*")
-                            } else {
-                                galleryPermissionLauncher.launch(galleryPermission)
-                            }
-                        },
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color.LightGray),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8))
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                itemsIndexed(uploadedImages) { index, image ->
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(
+                                width = if (image.isPrimary) 3.dp else 1.dp,
+                                color = if (image.isPrimary) Color(0xFF0047FF) else Color.LightGray,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { viewModel.selectPrimaryImage(index) }
                     ) {
-                        if (isUploading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Subiendo...", fontSize = 12.sp, color = Color.Gray)
-                        } else {
-                            Icon(Icons.Default.Upload, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(32.dp))
-                            Text("Subir", fontSize = 14.sp, color = Color.Gray)
+                        AsyncImage(
+                            model = image.url,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        
+                        if (image.isPrimary) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Principal",
+                                tint = Color(0xFF0047FF),
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(4.dp)
+                                    .size(20.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.removeImage(index) },
+                            modifier = Modifier
+                                .size(24.dp)
+                                .align(Alignment.TopEnd)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
-            } else {
-                // 7. Visualización con Coil
-                Surface(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clickable { 
-                            // Podrías mostrar un diálogo para elegir entre Cámara o Galería aquí
-                            val status = ContextCompat.checkSelfPermission(context, galleryPermission)
-                            if (status == PackageManager.PERMISSION_GRANTED) {
-                                galleryLauncher.launch("image/*")
-                            } else {
-                                galleryPermissionLauncher.launch(galleryPermission)
+                
+                if (uploadedImages.size < 3) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clickable { 
+                                    val status = ContextCompat.checkSelfPermission(context, galleryPermission)
+                                    if (status == PackageManager.PERMISSION_GRANTED) {
+                                        galleryLauncher.launch("image/*")
+                                    } else {
+                                        galleryPermissionLauncher.launch(galleryPermission)
+                                    }
+                                },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color.LightGray),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8))
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                if (isUploading) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                } else {
+                                    Icon(Icons.Default.Add, null, tint = Color.Gray)
+                                }
                             }
-                        },
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color.LightGray)
-                ) {
-                    AsyncImage(
-                        model = selectedImage,
-                        contentDescription = "Selected Image",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alpha = if (isUploading) 0.5f else 1f
-                    )
-                    if (isUploading) {
-                        Box(contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
                         }
                     }
                 }
             }
-            
-            Text(
-                "Puedes agregar hasta 5 imágenes (opcional)", 
-                fontSize = 12.sp, 
-                color = Color.Gray, 
-                modifier = Modifier.padding(top = 8.dp)
-            )
 
             Spacer(modifier = Modifier.height(100.dp))
         }
@@ -368,48 +410,4 @@ fun FieldLabel(text: String) {
         fontSize = 14.sp, 
         modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
     )
-}
-
-// 9. Función de subida a Cloudinary
-fun subirImagenCloudinary(uri: Uri, onSuccess: (String) -> Unit, onError: () -> Unit) {
-    // 10. Log inicio
-    Log.d("Cloudinary", "Iniciando subida de imagen: $uri")
-    
-    MediaManager.get().upload(uri)
-        .unsigned("ruvo_app") // 8. Upload preset unsigned
-        .callback(object : UploadCallback {
-            override fun onStart(requestId: String) {
-                Log.d("Cloudinary", "Subida iniciada con ID: $requestId")
-            }
-
-            override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {
-                val progress = (bytes.toDouble() / totalBytes * 100).toInt()
-                Log.d("Cloudinary", "Progreso de subida: $progress%")
-            }
-
-            override fun onSuccess(requestId: String, resultData: Map<*, *>) {
-                val secureUrl = resultData["secure_url"] as String
-                // 10. Log éxito
-                Log.d("Cloudinary", "Subida EXITOSA. URL: $secureUrl")
-                onSuccess(secureUrl)
-            }
-
-            override fun onError(requestId: String, error: ErrorInfo) {
-                // 10. Log error
-                Log.e("Cloudinary", "Error en la subida: ${error.description}")
-                onError()
-            }
-
-            override fun onReschedule(requestId: String, error: ErrorInfo) {
-                Log.d("Cloudinary", "Subida reprogramada")
-            }
-        }).dispatch()
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CrearServicioScreenPreview() {
-    Ruvo_appTheme {
-        CrearServicioScreen(onBackClick = {})
-    }
 }

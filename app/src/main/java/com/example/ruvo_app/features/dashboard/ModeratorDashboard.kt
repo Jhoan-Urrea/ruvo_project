@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.core.component.AdminPostCard
 import com.example.ruvo_app.core.component.AdminServiceCard
 import com.example.ruvo_app.core.component.AdminUserCard
@@ -33,11 +34,14 @@ import com.example.ruvo_app.domain.model.*
 @Composable
 fun ModeratorDashboard(
     onLogout: () -> Unit = {},
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    viewModel: ModeratorViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Todos") }
     var selectedAdminTab by remember { mutableIntStateOf(0) }
+    
+    val allPosts by viewModel.allPosts.collectAsState()
 
     Scaffold(
         topBar = {
@@ -87,7 +91,15 @@ fun ModeratorDashboard(
                 0 -> AdminStatisticsScreen()
                 1 -> ServicesManagement(searchQuery, selectedFilter, { searchQuery = it }, { selectedFilter = it })
                 2 -> UsersManagement(searchQuery, selectedFilter, { searchQuery = it }, { selectedFilter = it })
-                3 -> PostsManagement(searchQuery, selectedFilter, { searchQuery = it }, { selectedFilter = it })
+                3 -> PostsManagement(
+                    query = searchQuery, 
+                    filter = selectedFilter, 
+                    onQueryChange = { searchQuery = it }, 
+                    onFilterChange = { selectedFilter = it },
+                    posts = allPosts,
+                    onApprove = { viewModel.approvePost(it) },
+                    onReject = { viewModel.rejectPost(it) }
+                )
                 else -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(text = "Sección en desarrollo")
@@ -98,6 +110,57 @@ fun ModeratorDashboard(
     }
 }
 
+@Composable
+fun PostsManagement(
+    query: String, 
+    filter: String, 
+    onQueryChange: (String) -> Unit, 
+    onFilterChange: (String) -> Unit,
+    posts: List<ServicePost>,
+    onApprove: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
+    Column {
+        Text(text = "Gestión de Publicaciones", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
+        Text(text = "Modera y aprueba publicaciones, servicios y reportes", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AdminSummaryCard("${posts.size}", "Total", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+            AdminSummaryCard("${posts.count { it.status == PostStatus.PENDIENTE }}", "Pendientes", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+            AdminSummaryCard("${posts.count { it.status == PostStatus.VERIFICADO }}", "Aprobados", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+            AdminSummaryCard("0", "Reportados", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        AdminSearchBar(query, onQueryChange, "Buscar publicaciones o autores...")
+        Spacer(modifier = Modifier.height(16.dp))
+        AdminFilterRow(filter, onFilterChange, listOf("Todos", "Pendientes", "Aprobados", "Reportados", "Rechazados"))
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val filteredPosts = when(filter) {
+                "Pendientes" -> posts.filter { it.status == PostStatus.PENDIENTE }
+                "Aprobados" -> posts.filter { it.status == PostStatus.VERIFICADO }
+                "Rechazados" -> posts.filter { it.status == PostStatus.RECHAZADO }
+                else -> posts
+            }
+            
+            items(filteredPosts) { post -> 
+                AdminPostCard(
+                    post = post, 
+                    authorName = "Cargando...", // En producción traer del UserDoc
+                    date = "Reciente",
+                    onApprove = { onApprove(post.id) },
+                    onReject = { onReject(post.id) }
+                ) 
+            }
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
+    }
+}
+
+// Re-implementing sub-components for better organization
 @Composable
 fun AdminStatisticsScreen() {
     Column {
@@ -163,11 +226,35 @@ fun ServicesManagement(query: String, filter: String, onQueryChange: (String) ->
 
 @Composable
 fun UsersManagement(query: String, filter: String, onQueryChange: (String) -> Unit, onFilterChange: (String) -> Unit) {
+    var showRoleConfirm by remember { mutableStateOf<User?>(null) }
+    
     val mockUsers = listOf(
-        User(id = "1", fullName = "Juan Pérez", email = "juan.perez@email.com", username = "juanp", status = AccountStatus.ACTIVE, lastActive = "Hace 2 horas", reputation = Reputation(rating = 4.8f), stats = UserStats(activePosts = 12, reportsCount = 0)),
-        User(id = "2", fullName = "María García", email = "maria.garcia@email.com", username = "mariag", status = AccountStatus.ACTIVE, lastActive = "Hace 1 día", reputation = Reputation(rating = 4.9f), stats = UserStats(activePosts = 8, reportsCount = 0)),
-        User(id = "3", fullName = "Carlos López", email = "carlos.lopez@email.com", username = "carlosl", status = AccountStatus.WARNING, lastActive = "Hace 3 horas", reputation = Reputation(rating = 3.5f), stats = UserStats(activePosts = 5, reportsCount = 3))
+        User(id = "1", fullName = "Juan Pérez", email = "juan.perez@email.com", username = "juanp", status = AccountStatus.ACTIVE, lastActive = "Hace 2 horas", reputation = Reputation(rating = 4.8f), stats = UserStats(activePosts = 12, reportsCount = 0), role = UserRole.USER),
+        User(id = "2", fullName = "María García", email = "maria.garcia@email.com", username = "mariag", status = AccountStatus.ACTIVE, lastActive = "Hace 1 día", reputation = Reputation(rating = 4.9f), stats = UserStats(activePosts = 8, reportsCount = 0), role = UserRole.MODERATOR),
+        User(id = "3", fullName = "Carlos López", email = "carlos.lopez@email.com", username = "carlosl", status = AccountStatus.WARNING, lastActive = "Hace 3 horas", reputation = Reputation(rating = 3.5f), stats = UserStats(activePosts = 5, reportsCount = 3), role = UserRole.USER)
     )
+
+    if (showRoleConfirm != null) {
+        val newRole = if (showRoleConfirm!!.role == UserRole.USER) UserRole.MODERATOR else UserRole.USER
+        AlertDialog(
+            onDismissRequest = { showRoleConfirm = null },
+            confirmButton = {
+                Button(onClick = { showRoleConfirm = null }) {
+                    Text("Confirmar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRoleConfirm = null }) {
+                    Text("Cancelar")
+                }
+            },
+            title = { Text("Cambiar Rol de Usuario") },
+            text = { 
+                Text("¿Estás seguro de cambiar el rol de ${showRoleConfirm!!.fullName} a ${newRole.name}? \n\n" +
+                     "Esta acción modificará los permisos de acceso del usuario a las funciones administrativas.") 
+            }
+        )
+    }
 
     Column {
         Text(text = "Gestión de Usuarios", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
@@ -186,64 +273,10 @@ fun UsersManagement(query: String, filter: String, onQueryChange: (String) -> Un
         AdminFilterRow(filter, onFilterChange, listOf("Todos", "Activos", "Advertencias", "Bloqueados"))
         Spacer(modifier = Modifier.height(8.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(mockUsers) { user -> AdminUserCard(user = user) }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-        }
-    }
-}
-
-@Composable
-fun PostsManagement(query: String, filter: String, onQueryChange: (String) -> Unit, onFilterChange: (String) -> Unit) {
-    val mockPosts = listOf(
-        ServicePost(
-            title = "Instalación de aire acondicionado",
-            description = "Servicio profesional de instalación y mantenimiento de equipos de climatización para hogares y oficinas.",
-            authorId = "user1",
-            category = ServiceCategory.HOGAR,
-            status = PostStatus.PENDIENTE,
-            minPrice = 50.0, maxPrice = 100.0, addressText = "Madrid", coverageRadius = 10.0, coordinates = GeoPoint(0.0, 0.0)
-        ),
-        ServicePost(
-            title = "¡Nuevo servicio de jardinería disponible!",
-            description = "Ofrezco servicios de jardinería y mantenimiento de áreas verdes. Diseño de jardines personalizados.",
-            authorId = "user2",
-            category = ServiceCategory.HOGAR,
-            status = PostStatus.VERIFICADO,
-            minPrice = 20.0, maxPrice = 50.0, addressText = "Barcelona", coverageRadius = 5.0, coordinates = GeoPoint(0.0, 0.0)
-        ),
-        ServicePost(
-            title = "Clases de guitarra para principiantes",
-            description = "Clases personalizadas de guitarra acústica y eléctrica. Incluye material de apoyo.",
-            authorId = "user3",
-            category = ServiceCategory.EDUCACION,
-            status = PostStatus.PENDIENTE,
-            minPrice = 15.0, maxPrice = 30.0, addressText = "Valencia", coverageRadius = 0.0, coordinates = GeoPoint(0.0, 0.0)
-        )
-    )
-
-    Column {
-        Text(text = "Gestión de Publicaciones", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
-        Text(text = "Modera y aprueba publicaciones, servicios y reportes", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AdminSummaryCard("7", "Total", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-            AdminSummaryCard("3", "Pendientes", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-            AdminSummaryCard("2", "Aprobados", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-            AdminSummaryCard("1", "Reportados", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        AdminSearchBar(query, onQueryChange, "Buscar publicaciones o autores...")
-        Spacer(modifier = Modifier.height(16.dp))
-        AdminFilterRow(filter, onFilterChange, listOf("Todos", "Pendientes", "Aprobados", "Reportados", "Rechazados"))
-        Spacer(modifier = Modifier.height(8.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(mockPosts) { post -> 
-                AdminPostCard(
-                    post = post, 
-                    authorName = if(post.authorId == "user1") "Pedro Sanchez" else "Laura Fernandez", 
-                    date = "2026-04-07"
+            items(mockUsers) { user -> 
+                AdminUserCard(
+                    user = user,
+                    onChangeRole = { showRoleConfirm = user }
                 ) 
             }
             item { Spacer(modifier = Modifier.height(16.dp)) }

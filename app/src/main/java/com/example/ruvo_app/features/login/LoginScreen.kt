@@ -149,8 +149,12 @@ fun LoginScreen(
 
             // Mensaje de Error
             if (uiState.error != null) {
+                val errorMsg = when(uiState.error) {
+                    "error_required_fields" -> "Por favor, completa todos los campos"
+                    else -> uiState.error!!
+                }
                 Text(
-                    text = uiState.error!!,
+                    text = errorMsg,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier

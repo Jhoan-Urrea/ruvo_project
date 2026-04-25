@@ -37,16 +37,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    buildFeatures {
-        compose = true
-    }
-}
-
-// Configuración de JVM correcta para Kotlin 2.0 y evitar errores de deprecación
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     kotlinOptions {
         jvmTarget = "11"
-        // Si el error de deprecación persiste, Gradle mismo te sugerirá compilerOptions
+    }
+
+    buildFeatures {
+        compose = true
     }
 }
 

@@ -3,9 +3,11 @@ package com.example.ruvo_app.core.di
 import android.content.Context
 import com.example.ruvo_app.data.local.UserPreferencesManager
 import com.example.ruvo_app.data.repository.AuthRepositoryImpl
+import com.example.ruvo_app.data.repository.NotificationRepositoryImpl
 import com.example.ruvo_app.data.repository.ServiceRepositoryImpl
 import com.example.ruvo_app.data.repository.UserRepositoryImpl
 import com.example.ruvo_app.domain.repository.AuthRepository
+import com.example.ruvo_app.domain.repository.NotificationRepository
 import com.example.ruvo_app.domain.repository.ServiceRepository
 import com.example.ruvo_app.domain.repository.UserRepository
 import com.example.ruvo_app.domain.usecase.*
@@ -52,6 +54,12 @@ object AppModule {
     fun provideServiceRepository(
         firestore: FirebaseFirestore
     ): ServiceRepository = ServiceRepositoryImpl(firestore)
+
+    @Provides
+    @Singleton
+    fun provideNotificationRepository(
+        firestore: FirebaseFirestore
+    ): NotificationRepository = NotificationRepositoryImpl(firestore)
 
     @Provides
     @Singleton

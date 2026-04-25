@@ -6,7 +6,7 @@ data class ServicePost(
     val title: String,
     val category: ServiceCategory,
     val description: String, // Max 500 characters
-    val images: List<String> = emptyList(),
+    val images: List<ImageResource> = emptyList(),
     val coordinates: GeoPoint,
     val addressText: String,
     val coverageRadius: Double, // in kilometers

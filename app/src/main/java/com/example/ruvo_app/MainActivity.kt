@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ruvo_app.core.navigation.AppNavGraph
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
 import com.example.ruvo_app.features.auth.AuthUiState
@@ -25,8 +25,7 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             Ruvo_appTheme {
-                // Hilt maneja la inyección automáticamente
-                val authViewModel: AuthViewModel = hiltViewModel()
+                val authViewModel: AuthViewModel = viewModel()
                 val authState by authViewModel.uiState.collectAsState()
 
                 Box(modifier = Modifier.fillMaxSize()) {

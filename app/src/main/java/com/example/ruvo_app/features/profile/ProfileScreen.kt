@@ -31,19 +31,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ruvo_app.R
-import com.example.ruvo_app.core.component.UserServiceCard
+import com.example.ruvo_app.core.component.ServicePostCard
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
-import com.example.ruvo_app.data.repository.UserRepositoryImpl
-import com.example.ruvo_app.domain.model.Service
+import com.example.ruvo_app.domain.model.ServicePost
 import com.example.ruvo_app.domain.model.User
+import java.util.Locale
 
 @Composable
 fun ProfileScreen(
     onSettingsClick: () -> Unit = {},
+    onServiceClick: (String) -> Unit = {},
     viewModel: ProfileViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -63,7 +61,7 @@ fun ProfileScreen(
                 )
             }
             is ProfileUiState.Success -> {
-                ProfileContent(state.user, scrollState, onSettingsClick)
+                ProfileContent(state.user, state.services, scrollState, onSettingsClick, onServiceClick)
             }
         }
     }
@@ -72,22 +70,11 @@ fun ProfileScreen(
 @Composable
 fun ProfileContent(
     user: User, 
+    services: List<ServicePost>,
     scrollState: androidx.compose.foundation.ScrollState,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onServiceClick: (String) -> Unit
 ) {
-    // Mock data for services
-    val mockServices = listOf(
-        Service(
-            title = "Fontanería General",
-            description = "Servicio de fontanería para el hogar.",
-            category = "Hogar",
-            price = 45.0,
-            rating = 4.8f,
-            reviewsCount = 12,
-            location = "Armenia"
-        )
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -194,7 +181,7 @@ fun ProfileContent(
                             Text(text = "🏆", fontSize = 18.sp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "${stringResource(R.string.profile_level)}: ${user.reputation.level.name.lowercase().capitalize()}",
+                                text = "${stringResource(R.string.profile_level)}: ${user.reputation.level.name.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}",
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                             )
                         }
@@ -223,7 +210,7 @@ fun ProfileContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                StatItem(icon = Icons.Outlined.ChatBubbleOutline, count = "${user.stats.activePosts + user.stats.finishedPosts}", label = stringResource(R.string.profile_total_services), iconColor = Color(0xFF4CAF50))
+                StatItem(icon = Icons.Outlined.ChatBubbleOutline, count = "${services.size}", label = stringResource(R.string.profile_total_services), iconColor = Color(0xFF4CAF50))
                 StatItem(icon = Icons.Outlined.FavoriteBorder, count = "0", label = stringResource(R.string.profile_votes), iconColor = Color(0xFFE91E63))
             }
 
@@ -265,8 +252,14 @@ fun ProfileContent(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            mockServices.forEach { service ->
-                UserServiceCard(service = service)
+            // List of real services from Firestore
+            services.forEach { post ->
+                ServicePostCard(
+                    post = post,
+                    authorName = user.fullName,
+                    authorRole = user.reputation.level.name,
+                    onClick = { onServiceClick(post.id) }
+                )
             }
 
             Spacer(modifier = Modifier.height(100.dp))
@@ -336,13 +329,5 @@ fun AchievementItem(title: String) {
                 textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ProfileScreenPreview() {
-    Ruvo_appTheme {
-        ProfileScreen()
     }
 }

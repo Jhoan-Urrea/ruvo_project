@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
@@ -20,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -46,6 +43,7 @@ fun DashboardScreen(
     onAddPostClick: () -> Unit = {},
     onAdminDetailedClick: () -> Unit = {},
     onServiceClick: (Screen.DetalleServicio) -> Unit = {},
+    onChatListClick: () -> Unit = {},
     isAdmin: Boolean = false,
     initialSuccessMessage: String? = null
 ) {
@@ -54,7 +52,6 @@ fun DashboardScreen(
     
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mostrar mensaje de éxito si existe
     LaunchedEffect(initialSuccessMessage) {
         initialSuccessMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -99,7 +96,7 @@ fun DashboardScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { /* TODO: Mensajería */ }) {
+                        IconButton(onClick = onChatListClick) {
                             Icon(
                                 imageVector = Icons.Outlined.ChatBubbleOutline,
                                 contentDescription = stringResource(R.string.dashboard_messages),
@@ -217,7 +214,7 @@ fun HomeContent(
             id = "6",
             title = "Servicio Técnico PC",
             description = "Reparación de hardware y software, mantenimiento preventivo y correctivo.",
-            category = "Educación", // O según convenga
+            category = "Educación",
             location = "Manizales, Caldas",
             priceRange = "$ 40.000 - $100.000",
             userName = "Kevin Castro",
@@ -245,17 +242,20 @@ fun HomeContent(
                     CategoryItem("Todo", null),
                     CategoryItem("Hogar", "🏠"),
                     CategoryItem("Educación", "📚"),
-                    CategoryItem("Mascotas", "🐾")
+                    CategoryItem("Mascotas", "🐾"),
+                    CategoryItem("Tecnología", "💻"),
+                    CategoryItem("Transporte", "🚗")
                 )
 
-                Row(
+                LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .padding(bottom = 12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    categories.forEach { category ->
+                    items(categories) { category ->
                         val isSelected = selectedCategory == category.name
                         FilterChip(
                             selected = isSelected,
@@ -271,7 +271,7 @@ fun HomeContent(
                                     }
                                     Text(
                                         text = category.name,
-                                        fontSize = 11.sp, // Fuente un poco más pequeña para que quepa todo
+                                        fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 }
@@ -309,7 +309,7 @@ fun HomeContent(
             // Listado de Tarjetas
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 val filteredServices = if (selectedCategory == "Todo") {
@@ -330,7 +330,7 @@ fun HomeContent(
                                     category = service.category,
                                     location = service.location,
                                     priceRange = service.priceRange,
-                                    providerId = "1", // Mock ID
+                                    providerId = "1",
                                     providerName = service.userName,
                                     providerSpecialty = service.userSpecialty,
                                     providerImageRes = R.drawable.isotipo,
@@ -342,8 +342,6 @@ fun HomeContent(
                         }
                     )
                 }
-
-                item { Spacer(modifier = Modifier.height(72.dp)) }
             }
         }
 
@@ -368,7 +366,9 @@ fun HomeContent(
 fun ServiceCard(service: Service, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -498,7 +498,7 @@ fun ServiceCard(service: Service, onClick: () -> Unit) {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = painterResource(id = R.drawable.isotipo), // Usando isotipo como placeholder de avatar
+                            painter = painterResource(id = R.drawable.isotipo),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(32.dp)
