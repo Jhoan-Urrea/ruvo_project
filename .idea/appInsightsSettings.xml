@@ -10,9 +10,9 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="com.example.ruvo_app" />
-                  <option name="mobileSdkAppId" value="1:362417735763:android:f92d929132c88f0fb79ea6" />
-                  <option name="projectId" value="ruvo-app-e55ef" />
-                  <option name="projectNumber" value="362417735763" />
+                  <option name="mobileSdkAppId" value="1:684750949230:android:4e74eabf5d469af17a0f7f" />
+                  <option name="projectId" value="ruvo-app-26" />
+                  <option name="projectNumber" value="684750949230" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

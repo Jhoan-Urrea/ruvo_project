@@ -1,4 +1,4 @@
-package com.example.ruvo_app.features.dashboard
+package com.example.ruvo_app.features.service
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -43,6 +43,7 @@ fun ServiceDetailScreen(
     postId: String,
     onBackClick: () -> Unit,
     onViewProfileClick: (String) -> Unit = {},
+    onSolicitarClick: (String) -> Unit = {},
     viewModel: ServiceDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -322,7 +323,7 @@ fun ServiceDetailScreen(
                                     )
                                 }
                                 Button(
-                                    onClick = { /* TODO: Request */ },
+                                    onClick = { onSolicitarClick(post.id) },
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     shape = RoundedCornerShape(24.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF))

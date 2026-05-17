@@ -4,7 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,29 +22,40 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
+import com.example.ruvo_app.domain.model.ChatMessage
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     chatData: Screen.Chat,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
     var messageText by remember { mutableStateOf("") }
-    
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage(
-                content = "Hola Mi nombre es Manuel, y estoy interesado en contratar tus servicios. ¿Estas disponible?",
-                timestamp = "00:00 am",
-                isFromMe = true
-            )
-        )
+    val messages by viewModel.messages.collectAsState()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(chatData.providerId) {
+        viewModel.loadMessages(chatData.providerId)
+    }
+
+    // Auto-scroll to bottom when new messages arrive
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size)
+        }
     }
 
     Scaffold(
@@ -100,8 +113,11 @@ fun ChatScreen(
                 onValueChange = { messageText = it },
                 onSend = {
                     if (messageText.isNotBlank()) {
-                        messages.add(ChatMessage(messageText, "09:30 am", true))
+                        viewModel.sendMessage(chatData.providerId, messageText)
                         messageText = ""
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(messages.size)
+                        }
                     }
                 }
             )
@@ -114,13 +130,13 @@ fun ChatScreen(
                 .background(Color(0xFFF5F5F5))
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Información del servicio si viene de uno
                 if (chatData.serviceTitle != null) {
                     item {
                         ServiceContextCard(
@@ -130,68 +146,167 @@ fun ChatScreen(
                     }
                 }
 
-                items(messages) { message ->
-                    ChatBubble(message)
+                itemsIndexed(messages) { index, message ->
+                    // Show date header if it's the first message or date changed
+                    if (shouldShowDateHeader(index, messages)) {
+                        DateHeader(timestamp = message.timestamp)
+                    }
+
+                    ChatBubble(
+                        message = message,
+                        isFromMe = message.senderId == currentUserId,
+                        showAvatar = shouldShowAvatar(index, messages, currentUserId)
+                    )
                 }
             }
         }
     }
 }
 
+private fun shouldShowDateHeader(index: Int, messages: List<ChatMessage>): Boolean {
+    if (index == 0) return true
+    val currentMsgDate = Calendar.getInstance().apply { timeInMillis = messages[index].timestamp }
+    val prevMsgDate = Calendar.getInstance().apply { timeInMillis = messages[index - 1].timestamp }
+    
+    return currentMsgDate.get(Calendar.DAY_OF_YEAR) != prevMsgDate.get(Calendar.DAY_OF_YEAR) ||
+           currentMsgDate.get(Calendar.YEAR) != prevMsgDate.get(Calendar.YEAR)
+}
+
+private fun shouldShowAvatar(index: Int, messages: List<ChatMessage>, currentUserId: String): Boolean {
+    // Show avatar only for the last message in a group from the other user
+    if (messages[index].senderId == currentUserId) return false
+    if (index == messages.size - 1) return true
+    return messages[index + 1].senderId != messages[index].senderId
+}
+
 @Composable
-fun ServiceContextCard(title: String, description: String) {
-    Column(
+fun DateHeader(timestamp: Long) {
+    val dateText = remember(timestamp) {
+        val calendar = Calendar.getInstance()
+        val today = calendar.get(Calendar.DAY_OF_YEAR)
+        calendar.timeInMillis = timestamp
+        val messageDay = calendar.get(Calendar.DAY_OF_YEAR)
+        
+        when {
+            today == messageDay -> "Hoy"
+            today - messageDay == 1 -> "Ayer"
+            else -> SimpleDateFormat("dd 'de' MMMM", Locale("es", "ES")).format(Date(timestamp))
+        }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        contentAlignment = Alignment.Center
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            color = Color.LightGray.copy(alpha = 0.3f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = Color(0xFF2ECC71),
-                modifier = Modifier.size(20.dp)
+                text = dateText,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.DarkGray
             )
         }
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 4.dp)
-        )
     }
 }
 
 @Composable
-fun ChatBubble(message: ChatMessage) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (message.isFromMe) Alignment.End else Alignment.Start
+fun ServiceContextCard(title: String, description: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8EAF6)),
+        shape = RoundedCornerShape(12.dp)
     ) {
+        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color(0xFF2ECC71),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 4.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun ChatBubble(
+    message: ChatMessage,
+    isFromMe: Boolean,
+    showAvatar: Boolean = false
+) {
+    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val time = sdf.format(Date(message.timestamp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isFromMe) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        if (!isFromMe && showAvatar) {
+            // Space for avatar or placeholder can be added here
+            Spacer(modifier = Modifier.width(4.dp))
+        } else if (!isFromMe) {
+            Spacer(modifier = Modifier.width(4.dp))
+        }
+
         Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = if (message.isFromMe) Color.White else Color(0xFFE3F2FD),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isFromMe) 16.dp else 4.dp,
+                bottomEnd = if (isFromMe) 4.dp else 16.dp
+            ),
+            color = if (isFromMe) Color(0xFF0047FF) else Color.White,
             shadowElevation = 1.dp,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = message.content,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isFromMe) Color.White else Color.Black
                 )
-                Text(
-                    text = message.timestamp,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray,
-                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
-                )
+                Row(
+                    modifier = Modifier.align(Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isFromMe) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                    if (isFromMe) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = if (message.isRead) Icons.Default.DoneAll else Icons.Default.Done,
+                            contentDescription = null,
+                            tint = if (message.isRead) Color(0xFF80D8FF) else Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(14.dp).padding(top = 4.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -205,6 +320,7 @@ fun ChatInputBar(
 ) {
     Surface(
         color = Color.White,
+        tonalElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
@@ -232,38 +348,14 @@ fun ChatInputBar(
                 shape = RoundedCornerShape(24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
-            FloatingActionButton(
+            IconButton(
                 onClick = onSend,
-                containerColor = Color(0xFF0047FF),
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFF0047FF), CircleShape)
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar")
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Color.White)
             }
         }
-    }
-}
-
-data class ChatMessage(
-    val content: String,
-    val timestamp: String,
-    val isFromMe: Boolean
-)
-
-@Preview(showBackground = true)
-@Composable
-fun ChatScreenPreview() {
-    Ruvo_appTheme {
-        ChatScreen(
-            chatData = Screen.Chat(
-                providerId = "1",
-                providerName = "Juan Hurtado",
-                providerSpecialty = "Licenciado",
-                providerImageRes = R.drawable.tutor,
-                serviceTitle = "Tutor de conceptos económicos",
-                serviceDescription = "Licenciado en Matemáticas de la Universidad La Liberta del Mundo Imaginario"
-            )
-        )
     }
 }

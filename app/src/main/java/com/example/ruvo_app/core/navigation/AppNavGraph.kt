@@ -12,6 +12,7 @@ import com.example.ruvo_app.domain.model.UserRole
 import com.example.ruvo_app.features.auth.AuthUiState
 import com.example.ruvo_app.features.auth.AuthViewModel
 import com.example.ruvo_app.features.dashboard.DashboardScreen
+import com.example.ruvo_app.features.dashboard.DashboardViewModel
 import com.example.ruvo_app.features.dashboard.ModeratorDashboard
 import com.example.ruvo_app.features.home.HomeScreen
 import com.example.ruvo_app.features.login.AuthSelectionScreen
@@ -28,7 +29,8 @@ import com.example.ruvo_app.features.chat.ChatListScreen
 import com.example.ruvo_app.features.request.SolicitarServicioScreen
 import com.example.ruvo_app.features.notifications.NotificationsScreen
 import com.example.ruvo_app.features.service.CrearServicioScreen
-import com.example.ruvo_app.features.service.DetalleServicioScreen
+import com.example.ruvo_app.features.service.ServiceDetailScreen
+import com.example.ruvo_app.features.service.SelectLocationScreen
 import com.example.ruvo_app.R
 
 @Composable
@@ -104,6 +106,8 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         composable<Screen.Dashboard> { backStackEntry ->
             val dashboardData: Screen.Dashboard = backStackEntry.toRoute()
             val state = authState as? AuthUiState.Authenticated
+            val dashboardViewModel: DashboardViewModel = hiltViewModel()
+            
             DashboardScreen(
                 onLogout = { authViewModel.logout() },
                 onSettingsClick = { navController.navigate(Screen.Settings) },
@@ -114,21 +118,21 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                 },
                 onChatListClick = { navController.navigate(Screen.ChatList) },
                 isAdmin = state?.user?.role == UserRole.MODERATOR,
-                initialSuccessMessage = dashboardData.successMessage
+                initialSuccessMessage = dashboardData.successMessage,
+                viewModel = dashboardViewModel
             )
         }
 
         composable<Screen.ChatList> {
             ChatListScreen(
                 onBackClick = { navController.popBackStack() },
-                onChatClick = { chatId ->
-                    // Por ahora navegamos a un chat genérico de ejemplo ya que es un mock
+                onChatClick = { chatId, userName, role, imageRes ->
                     navController.navigate(
                         Screen.Chat(
                             providerId = chatId,
-                            providerName = "Usuario de Chat",
-                            providerSpecialty = "Especialista",
-                            providerImageRes = R.drawable.isotipo
+                            providerName = userName,
+                            providerSpecialty = role,
+                            providerImageRes = imageRes
                         )
                     )
                 }
@@ -169,21 +173,53 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             )
         }
 
-        composable<Screen.CrearServicio> {
+        composable<Screen.CrearServicio> { backStackEntry ->
+            val selectedLat = backStackEntry.savedStateHandle.get<Double>("lat")
+            val selectedLng = backStackEntry.savedStateHandle.get<Double>("lng")
+            val selectedAddress = backStackEntry.savedStateHandle.get<String>("address")
+            val country = backStackEntry.savedStateHandle.get<String>("country")
+            val region = backStackEntry.savedStateHandle.get<String>("region")
+            val city = backStackEntry.savedStateHandle.get<String>("city")
+            val exact = backStackEntry.savedStateHandle.get<String>("exact")
+            
             CrearServicioScreen(
+                onBackClick = { navController.popBackStack() },
+                onSelectLocationClick = { navController.navigate(Screen.SelectLocation) },
+                initialLat = selectedLat,
+                initialLng = selectedLng,
+                initialAddress = selectedAddress,
+                initialCountry = country,
+                initialRegion = region,
+                initialCity = city,
+                initialExact = exact
+            )
+        }
+
+        composable<Screen.SelectLocation> {
+            SelectLocationScreen(
+                onLocationSelected = { lat, lng, full, country, region, city, exact ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("lat", lat)
+                    navController.previousBackStackEntry?.savedStateHandle?.set("lng", lng)
+                    navController.previousBackStackEntry?.savedStateHandle?.set("address", full)
+                    navController.previousBackStackEntry?.savedStateHandle?.set("country", country)
+                    navController.previousBackStackEntry?.savedStateHandle?.set("region", region)
+                    navController.previousBackStackEntry?.savedStateHandle?.set("city", city)
+                    navController.previousBackStackEntry?.savedStateHandle?.set("exact", exact)
+                    navController.popBackStack()
+                },
                 onBackClick = { navController.popBackStack() }
             )
         }
 
         composable<Screen.DetalleServicio> { backStackEntry ->
             val serviceDetail: Screen.DetalleServicio = backStackEntry.toRoute()
-            DetalleServicioScreen(
-                service = serviceDetail,
+            ServiceDetailScreen(
+                postId = serviceDetail.id,
                 onBackClick = { navController.popBackStack() },
-                onViewProfileClick = {
+                onViewProfileClick = { authorId ->
                     navController.navigate(
                         Screen.PerfilProveedor(
-                            providerId = serviceDetail.providerId,
+                            providerId = authorId,
                             name = serviceDetail.providerName,
                             specialty = "Especialista",
                             rating = serviceDetail.rating,
@@ -193,8 +229,20 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                         )
                     )
                 },
-                onSolicitarClick = { solicitarData ->
-                    navController.navigate(solicitarData)
+                onSolicitarClick = { postId ->
+                    navController.navigate(
+                        Screen.SolicitarServicio(
+                            serviceId = postId,
+                            serviceTitle = serviceDetail.title,
+                            serviceCategory = serviceDetail.category,
+                            servicePriceRange = serviceDetail.priceRange,
+                            serviceImageRes = serviceDetail.imageRes,
+                            providerName = serviceDetail.providerName,
+                            providerSpecialty = serviceDetail.providerSpecialty,
+                            providerImageRes = serviceDetail.providerImageRes,
+                            location = serviceDetail.location
+                        )
+                    )
                 }
             )
         }

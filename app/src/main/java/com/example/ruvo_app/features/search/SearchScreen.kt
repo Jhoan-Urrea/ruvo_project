@@ -23,83 +23,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
-import com.example.ruvo_app.features.dashboard.LocationDropdown
-import com.example.ruvo_app.features.dashboard.Service
+import com.example.ruvo_app.core.component.LocationDropdown
+import com.example.ruvo_app.core.component.ServicePostCard
+import com.example.ruvo_app.domain.model.ServicePost
+import com.example.ruvo_app.domain.model.ServiceCategory
+import com.example.ruvo_app.domain.model.GeoPoint
+import com.example.ruvo_app.features.dashboard.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    onServiceClick: (Screen.DetalleServicio) -> Unit = {}
+    onServiceClick: (Screen.DetalleServicio) -> Unit = {},
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val services by viewModel.services.collectAsState()
+    val cities by viewModel.cities.collectAsState()
 
-    // Lista completa de servicios (puedes expandirla con más ejemplos)
-    val allServices = listOf(
-        Service(
-            id = "1",
-            title = "Tutor de conceptos matemáticos",
-            description = "Licenciado en Matemáticas de la Universidad La Liberta del Mundo Imaginario",
-            category = "Educación",
-            location = "Armenia, Quindío",
-            priceRange = "$ 30.000 - $60.000 x Hora",
-            userName = "Juan Hurtado",
-            userSpecialty = "Licenciado",
-            imageRes = R.drawable.tutor
-        ),
-        Service(
-            id = "2",
-            title = "Tutor de conceptos económicos",
-            description = "Experto en microeconomía y macroeconomía con 5 años de experiencia.",
-            category = "Educación",
-            location = "Armenia, Quindío",
-            priceRange = "$ 30.000 - $60.000 x Hora",
-            userName = "Juan Hurtado",
-            userSpecialty = "Licenciado",
-            imageRes = R.drawable.tutor
-        ),
-        Service(
-            id = "3",
-            title = "Mudanzas Express",
-            description = "Servicio de mudanzas nacionales e internacionales con el mejor cuidado.",
-            category = "Hogar",
-            location = "Bogotá, Cundinamarca",
-            priceRange = "$ 150.000 - $500.000",
-            userName = "Camilo Ruiz",
-            userSpecialty = "Transportador",
-            imageRes = R.drawable.mudanza
-        ),
-        Service(
-            id = "4",
-            title = "Plomería Profesional",
-            description = "Arreglo de tuberías, grifería y filtraciones. Servicio garantizado 24/7.",
-            category = "Hogar",
-            location = "Medellín, Antioquia",
-            priceRange = "$ 50.000 - $120.000",
-            userName = "Andrés López",
-            userSpecialty = "Plomero certificado",
-            imageRes = R.drawable.plomero
-        ),
-        Service(
-            id = "5",
-            title = "Paseador de Perros",
-            description = "Paseos recreativos para todas las razas. Amante de los animales.",
-            category = "Mascotas",
-            location = "Pereira, Risaralda",
-            priceRange = "$ 15.000 - $25.000 x Hora",
-            userName = "Diego Marín",
-            userSpecialty = "Entrenador Canino",
-            imageRes = R.drawable.paseador_perros
-        )
-    )
-
-    // Lógica de filtrado en tiempo real
-    val filteredServices = remember(searchQuery) {
+    val filteredServices = remember(searchQuery, services) {
         if (searchQuery.isBlank()) {
-            allServices
+            services
         } else {
-            allServices.filter { service ->
+            services.filter { service ->
                 service.title.contains(searchQuery, ignoreCase = true) ||
                 service.description.contains(searchQuery, ignoreCase = true)
             }
@@ -173,7 +122,7 @@ fun SearchScreen(
                     modifier = Modifier.size(20.dp)
                 )
 
-                LocationDropdown("Todos", Modifier.weight(1f))
+                LocationDropdown(cities.firstOrNull() ?: "Todos", Modifier.weight(1f))
                 LocationDropdown("Region", Modifier.weight(1f))
                 LocationDropdown("Ciudad", Modifier.weight(1f))
             }
@@ -187,25 +136,26 @@ fun SearchScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(filteredServices) { service ->
+            items(filteredServices) { post ->
                 SearchServiceCard(
-                    service = service,
+                    post = post,
                     onClick = {
                         onServiceClick(
                             Screen.DetalleServicio(
-                                id = service.id,
-                                title = service.title,
-                                description = service.description,
-                                category = service.category,
-                                location = service.location,
-                                priceRange = service.priceRange,
-                                providerId = "PROV-${service.id}",
-                                providerName = service.userName,
-                                providerSpecialty = service.userSpecialty,
-                                providerImageRes = service.imageRes,
+                                id = post.id,
+                                title = post.title,
+                                description = post.description,
+                                category = post.category.name,
+                                location = post.addressText,
+                                priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
+                                providerId = post.authorId,
+                                providerName = "Proveedor",
+                                providerSpecialty = "Especialista",
+                                providerImageRes = R.drawable.isotipo,
                                 rating = 4.8f,
                                 reviewsCount = 12,
-                                imageRes = service.imageRes
+                                imageRes = R.drawable.card_service,
+                                imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
                             )
                         )
                     }
@@ -242,7 +192,7 @@ fun SearchScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchServiceCard(service: Service, onClick: () -> Unit) {
+fun SearchServiceCard(post: ServicePost, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier
@@ -264,12 +214,22 @@ fun SearchServiceCard(service: Service, onClick: () -> Unit) {
                     .padding(8.dp)
                     .clip(RoundedCornerShape(8.dp))
             ) {
-                Image(
-                    painter = painterResource(id = service.imageRes),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                val primaryImage = post.images.find { it.isPrimary } ?: post.images.firstOrNull()
+                if (primaryImage != null) {
+                    AsyncImage(
+                        model = primaryImage.url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.card_service),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 
                 // Badge de Categoría dinámico
                 Box(
@@ -280,10 +240,10 @@ fun SearchServiceCard(service: Service, onClick: () -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                    Icon(
-                       imageVector = when(service.category) {
-                           "Educación" -> Icons.Default.Book
-                           "Hogar" -> Icons.Default.Home
-                           "Mascotas" -> Icons.Default.Pets
+                       imageVector = when(post.category) {
+                           ServiceCategory.EDUCACION -> Icons.Default.Book
+                           ServiceCategory.HOGAR -> Icons.Default.Home
+                           ServiceCategory.MASCOTAS -> Icons.Default.Pets
                            else -> Icons.Default.Work
                        },
                        contentDescription = null,
@@ -305,7 +265,7 @@ fun SearchServiceCard(service: Service, onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = service.title,
+                        text = post.title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -322,7 +282,7 @@ fun SearchServiceCard(service: Service, onClick: () -> Unit) {
                 }
 
                 Text(
-                    text = service.description,
+                    text = post.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                     maxLines = 2,
@@ -347,14 +307,16 @@ fun SearchServiceCard(service: Service, onClick: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = service.location,
+                            text = post.city.ifEmpty { post.addressText },
                             fontSize = 10.sp,
-                            color = Color.Gray
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     Text(
-                        text = service.priceRange.split("x").first().trim(),
+                        text = "$ ${post.minPrice.toInt()}",
                         fontSize = 10.sp,
                         color = Color(0xFF0047FF),
                         fontWeight = FontWeight.Bold

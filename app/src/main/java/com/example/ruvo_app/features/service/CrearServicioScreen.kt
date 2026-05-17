@@ -2,6 +2,8 @@ package com.example.ruvo_app.features.service
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -18,15 +20,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,20 +40,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.location.LocationServices
-import android.location.Geocoder
-import java.util.Locale
 import coil.compose.AsyncImage
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
+import com.example.ruvo_app.domain.model.ServiceCategory
+import com.google.android.gms.location.LocationServices
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearServicioScreen(
     onBackClick: () -> Unit,
+    onSelectLocationClick: () -> Unit,
+    initialLat: Double? = null,
+    initialLng: Double? = null,
+    initialAddress: String? = null,
+    initialCountry: String? = null,
+    initialRegion: String? = null,
+    initialCity: String? = null,
+    initialExact: String? = null,
     viewModel: CrearServicioViewModel = hiltViewModel()
 ) {
     var titulo by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("Hogar") }
+    var categoriaExpander by remember { mutableStateOf(false) }
+    var categoriaSeleccionada by remember { mutableStateOf(ServiceCategory.HOGAR) }
     var descripcion by remember { mutableStateOf("") }
     var precioMin by remember { mutableStateOf("") }
     var precioMax by remember { mutableStateOf("") }
@@ -71,10 +77,26 @@ fun CrearServicioScreen(
     
     val titleError by viewModel.titleError.collectAsState()
     val priceError by viewModel.priceError.collectAsState()
+    val descriptionError by viewModel.descriptionError.collectAsState()
     
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // Sincronizar selección de ubicación desde el mapa
+    LaunchedEffect(initialLat, initialLng, initialAddress, initialCountry, initialRegion, initialCity, initialExact) {
+        if (initialLat != null && initialLng != null && initialAddress != null) {
+            viewModel.setLocationData(
+                lat = initialLat,
+                lng = initialLng,
+                country = initialCountry ?: "",
+                region = initialRegion ?: "",
+                city = initialCity ?: "",
+                exact = initialExact ?: ""
+            )
+            ubicacion = initialAddress
+        }
+    }
 
     LaunchedEffect(error) {
         error?.let {
@@ -121,16 +143,36 @@ fun CrearServicioScreen(
                     location?.let {
                         val geocoder = Geocoder(context, Locale.getDefault())
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            geocoder.getFromLocation(it.latitude, it.longitude, 1) { addresses ->
-                                if (addresses.isNotEmpty()) {
-                                    ubicacion = addresses[0].getAddressLine(0)
+                            geocoder.getFromLocation(it.latitude, it.longitude, 1, object : Geocoder.GeocodeListener {
+                                override fun onGeocode(addresses: MutableList<Address>) {
+                                    if (addresses.isNotEmpty()) {
+                                        val addr = addresses[0]
+                                        viewModel.setLocationData(
+                                            lat = it.latitude,
+                                            lng = it.longitude,
+                                            country = addr.countryName ?: "",
+                                            region = addr.adminArea ?: "",
+                                            city = addr.locality ?: addr.subAdminArea ?: "",
+                                            exact = addr.thoroughfare ?: addr.featureName ?: ""
+                                        )
+                                        ubicacion = addr.getAddressLine(0) ?: ""
+                                    }
                                 }
-                            }
+                            })
                         } else {
                             @Suppress("DEPRECATION")
                             val addresses = geocoder.getFromLocation(it.latitude, it.longitude, 1)
                             if (!addresses.isNullOrEmpty()) {
-                                ubicacion = addresses[0].getAddressLine(0)
+                                val addr = addresses[0]
+                                viewModel.setLocationData(
+                                    lat = it.latitude,
+                                    lng = it.longitude,
+                                    country = addr.countryName ?: "",
+                                    region = addr.adminArea ?: "",
+                                    city = addr.locality ?: addr.subAdminArea ?: "",
+                                    exact = addr.thoroughfare ?: addr.featureName ?: ""
+                                )
+                                ubicacion = addr.getAddressLine(0) ?: ""
                             }
                         }
                     }
@@ -162,14 +204,14 @@ fun CrearServicioScreen(
                     val max = precioMax.toDoubleOrNull() ?: 0.0
                     val rad = radio.toDoubleOrNull() ?: 5.0
                     
-                    if (titulo.isBlank() || descripcion.isBlank() || ubicacion.isBlank()) {
+                    if (titulo.isBlank() || ubicacion.isBlank()) {
                         Toast.makeText(context, "Por favor completa los campos obligatorios", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
                     viewModel.saveServicePost(
-                        titulo, categoria, descripcion, min, max, ubicacion, rad,
-                        onSuccess = { /* Handled by LaunchedEffect */ }
+                        titulo, categoriaSeleccionada.name, descripcion, min, max, ubicacion, rad,
+                        onSuccess = { }
                     )
                 },
                 modifier = Modifier
@@ -211,29 +253,57 @@ fun CrearServicioScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            FieldLabel("Categoria *")
-            OutlinedTextField(
-                value = categoria,
-                onValueChange = { },
-                modifier = Modifier.fillMaxWidth(),
-                trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null) },
-                shape = RoundedCornerShape(12.dp),
-                readOnly = true
-            )
+            FieldLabel("Categoría *")
+            ExposedDropdownMenuBox(
+                expanded = categoriaExpander,
+                onExpandedChange = { categoriaExpander = !categoriaExpander },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = categoriaSeleccionada.name.lowercase().replaceFirstChar { it.uppercase() },
+                    onValueChange = { },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpander) },
+                    shape = RoundedCornerShape(12.dp),
+                    readOnly = true,
+                    colors = OutlinedTextFieldDefaults.colors()
+                )
+                ExposedDropdownMenu(
+                    expanded = categoriaExpander,
+                    onDismissRequest = { categoriaExpander = false }
+                ) {
+                    ServiceCategory.entries.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                            onClick = {
+                                categoriaSeleccionada = category
+                                categoriaExpander = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             FieldLabel("Descripción *")
             OutlinedTextField(
                 value = descripcion,
-                onValueChange = { if (it.length <= 500) descripcion = it },
+                onValueChange = { 
+                    if (it.length <= 500) {
+                        descripcion = it
+                        viewModel.onDescriptionChanged(it)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
                 placeholder = { Text("Describe tu servicio, experiencia, disponibilidad, etc.") },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                isError = descriptionError != null,
+                supportingText = { descriptionError?.let { Text(it) } }
             )
-            Text("${descripcion.length}/500 caracteres", fontSize = 12.sp, color = Color.Gray)
+            Text("${descripcion.length}/500 caracteres", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -285,7 +355,12 @@ fun CrearServicioScreen(
                 onValueChange = { ubicacion = it },
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = { Icon(Icons.Default.LocationOn, null, tint = Color.Gray) },
-                placeholder = { Text("Ingresa la dirección o zona") },
+                trailingIcon = {
+                    IconButton(onClick = onSelectLocationClick) {
+                        Icon(Icons.Default.Map, contentDescription = "Seleccionar en mapa", tint = Color(0xFF0047FF))
+                    }
+                },
+                placeholder = { Text("Selecciona en el mapa") },
                 shape = RoundedCornerShape(12.dp)
             )
             Text(

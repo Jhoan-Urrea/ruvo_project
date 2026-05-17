@@ -55,6 +55,21 @@ class UserRepositoryImpl(
             Result.failure(e)
         }
     }
+
+    override fun getAllUsers(): Flow<List<User>> = callbackFlow {
+        val subscription = firestore.collection("users")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val users = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(UserDto::class.java)?.toDomain(doc.id)
+                } ?: emptyList()
+                trySend(users)
+            }
+        awaitClose { subscription.remove() }
+    }
 }
 
 // DTO for Firestore

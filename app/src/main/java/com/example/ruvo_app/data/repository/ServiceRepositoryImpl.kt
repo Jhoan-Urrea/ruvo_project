@@ -1,15 +1,13 @@
 package com.example.ruvo_app.data.repository
 
-import com.example.ruvo_app.domain.model.ImageResource
-import com.example.ruvo_app.domain.model.PostStatus
-import com.example.ruvo_app.domain.model.ServiceCategory
-import com.example.ruvo_app.domain.model.ServicePost
-import com.example.ruvo_app.domain.model.GeoPoint
+import com.example.ruvo_app.domain.model.*
 import com.example.ruvo_app.domain.repository.ServiceRepository
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,7 +36,7 @@ class ServiceRepositoryImpl @Inject constructor(
 
     override fun getServicePosts(): Flow<List<ServicePost>> = callbackFlow {
         val subscription = firestore.collection("services_posts")
-            .whereEqualTo("status", PostStatus.VERIFICADO.name) // Solo verificados
+            .whereEqualTo("status", PostStatus.VERIFICADO.name)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -97,9 +95,45 @@ class ServiceRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun toggleLike(postId: String, userId: String): Result<Unit> {
+        return try {
+            val docRef = firestore.collection("services_posts").document(postId)
+            val doc = docRef.get().await()
+            val likedBy = doc.get("likedBy") as? List<*> ?: emptyList<String>()
+            
+            if (likedBy.contains(userId)) {
+                docRef.update("likedBy", FieldValue.arrayRemove(userId)).await()
+            } else {
+                docRef.update("likedBy", FieldValue.arrayUnion(userId)).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun getAvailableCountries(): Flow<List<String>> {
+        return getAllServicePosts().map { posts ->
+            posts.map { it.country }.filter { it.isNotEmpty() }.distinct().sorted()
+        }
+    }
+
+    override fun getAvailableRegions(): Flow<List<String>> {
+        return getAllServicePosts().map { posts ->
+            posts.map { it.region }.filter { it.isNotEmpty() }.distinct().sorted()
+        }
+    }
+
+    override fun getAvailableCities(): Flow<List<String>> {
+        return getAllServicePosts().map { posts ->
+            posts.map { it.city }.filter { it.isNotEmpty() }.distinct().sorted()
+        }
+    }
 }
 
 data class ServicePostDto(
+    val id: String = "",
     val authorId: String = "",
     val title: String = "",
     val category: String = "HOGAR",
@@ -108,13 +142,19 @@ data class ServicePostDto(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val addressText: String = "",
+    val country: String = "",
+    val region: String = "",
+    val city: String = "",
+    val exactAddress: String = "",
     val coverageRadius: Double = 0.0,
     val minPrice: Double = 0.0,
     val maxPrice: Double = 0.0,
     val status: String = "PENDIENTE",
     val rejectionReason: String? = null,
     val importantCount: Int = 0,
-    val isFeatured: Boolean = false
+    val likedBy: List<String> = emptyList(),
+    val isFeatured: Boolean = false,
+    val createdAt: Long = 0L
 ) {
     fun toDomain(id: String) = ServicePost(
         id = id,
@@ -125,13 +165,19 @@ data class ServicePostDto(
         images = images.map { it.toDomain() },
         coordinates = GeoPoint(latitude, longitude),
         addressText = addressText,
+        country = country,
+        region = region,
+        city = city,
+        exactAddress = exactAddress,
         coverageRadius = coverageRadius,
         minPrice = minPrice,
         maxPrice = maxPrice,
         status = try { PostStatus.valueOf(status) } catch(e: Exception) { PostStatus.PENDIENTE },
         rejectionReason = rejectionReason,
         importantCount = importantCount,
-        isFeatured = isFeatured
+        likedBy = likedBy,
+        isFeatured = isFeatured,
+        createdAt = if (createdAt == 0L) System.currentTimeMillis() else createdAt
     )
 
     companion object {
@@ -144,13 +190,19 @@ data class ServicePostDto(
             latitude = post.coordinates.latitude,
             longitude = post.coordinates.longitude,
             addressText = post.addressText,
+            country = post.country,
+            region = post.region,
+            city = post.city,
+            exactAddress = post.exactAddress,
             coverageRadius = post.coverageRadius,
             minPrice = post.minPrice,
             maxPrice = post.maxPrice,
             status = post.status.name,
             rejectionReason = post.rejectionReason,
             importantCount = post.importantCount,
-            isFeatured = post.isFeatured
+            likedBy = post.likedBy,
+            isFeatured = post.isFeatured,
+            createdAt = post.createdAt
         )
     }
 }

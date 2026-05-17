@@ -35,6 +35,7 @@ sealed interface Screen {
     @Serializable object ChatList : Screen
     @Serializable object ModeratorDashboard : Screen
     @Serializable object CrearServicio : Screen
+    @Serializable object SelectLocation : Screen
     @Serializable data class DetalleServicio(
         val id: String,
         val title: String,
@@ -48,7 +49,8 @@ sealed interface Screen {
         val providerImageRes: Int,
         val rating: Float = 0f,
         val reviewsCount: Int = 0,
-        val imageRes: Int
+        val imageRes: Int,
+        val imageUrl: String? = null
     ) : Screen
     @Serializable data class SolicitarServicio(
         val serviceId: String,
@@ -56,6 +58,7 @@ sealed interface Screen {
         val serviceCategory: String,
         val servicePriceRange: String,
         val serviceImageRes: Int,
+        val providerId: String,
         val providerName: String,
         val providerSpecialty: String,
         val providerImageRes: Int,

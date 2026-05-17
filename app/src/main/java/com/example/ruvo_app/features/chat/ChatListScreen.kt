@@ -22,49 +22,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.R
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
+import com.example.ruvo_app.core.component.ChatListShimmer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(
     onBackClick: () -> Unit,
-    onChatClick: (String) -> Unit
+    onChatClick: (String, String, String, Int) -> Unit, // Updated to pass more data if needed
+    viewModel: ChatListViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
-
-    val mockChats = listOf(
-        ChatPreview(
-            id = "1",
-            userName = "Juan Hurtado",
-            userRole = "Licenciado",
-            lastMessage = "Hola, estoy interesado en tu servicio de tutoría.",
-            time = "10:30 AM",
-            unreadCount = 2,
-            imageRes = R.drawable.isotipo
-        ),
-        ChatPreview(
-            id = "2",
-            userName = "Maria Garcia",
-            userRole = "Proveedora",
-            lastMessage = "¿Podemos agendar para mañana a las 3?",
-            time = "Ayer",
-            unreadCount = 0,
-            imageRes = R.drawable.isotipo
-        ),
-        ChatPreview(
-            id = "3",
-            userName = "Pedro Sanchez",
-            userRole = "Cliente",
-            lastMessage = "Muchas gracias por el servicio, quedó excelente.",
-            time = "Lunes",
-            unreadCount = 0,
-            imageRes = R.drawable.isotipo
-        )
-    )
+    val chats by viewModel.chats.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
         topBar = {
@@ -104,12 +77,33 @@ fun ChatListScreen(
                 )
             )
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(mockChats) { chat ->
-                    ChatItem(chat = chat, onClick = { onChatClick(chat.id) })
+            if (isLoading) {
+                ChatListShimmer()
+            } else if (chats.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.isotipo),
+                            contentDescription = null,
+                            modifier = Modifier.size(80.dp),
+                            tint = Color.LightGray
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("No tienes conversaciones activas", color = Color.Gray)
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    val filteredChats = chats.filter { it.userName.contains(searchQuery, ignoreCase = true) }
+                    items(filteredChats) { chat ->
+                        ChatItem(
+                            chat = chat,
+                            onClick = { onChatClick(chat.id, chat.userName, chat.userRole, chat.imageRes) }
+                        )
+                    }
                 }
             }
         }
@@ -118,98 +112,102 @@ fun ChatListScreen(
 
 @Composable
 fun ChatItem(chat: ChatPreview, onClick: () -> Unit) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onClick() },
+        color = Color.White
     ) {
-        // Avatar
-        Box(modifier = Modifier.size(56.dp)) {
-            Image(
-                painter = painterResource(id = chat.imageRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
-                    .background(Color(0xFFF0F0F0)),
-                contentScale = ContentScale.Crop
-            )
-            // Online status dot (optional)
-            Box(
-                modifier = Modifier
-                    .size(14.dp)
-                    .background(Color(0xFF2ECC71), CircleShape)
-                    .border(2.dp, Color.White, CircleShape)
-                    .align(Alignment.BottomEnd)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = chat.userName,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Avatar with online status indicator
+            Box(modifier = Modifier.size(56.dp)) {
+                Image(
+                    painter = painterResource(id = chat.imageRes),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(Color(0xFFF0F0F0)),
+                    contentScale = ContentScale.Crop
                 )
-                Text(
-                    text = chat.time,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (chat.unreadCount > 0) MaterialTheme.colorScheme.primary else Color.Gray
+                // We could add logic for online status here
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(Color(0xFF2ECC71), CircleShape)
+                        .border(2.dp, Color.White, CircleShape)
+                        .align(Alignment.BottomEnd)
                 )
             }
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = chat.lastMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (chat.unreadCount > 0) Color.Black else Color.Gray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                if (chat.unreadCount > 0) {
-                    Badge(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White,
-                        modifier = Modifier.padding(start = 8.dp)
-                    ) {
-                        Text(text = chat.unreadCount.toString())
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = chat.userName,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = if (chat.unreadCount > 0) FontWeight.ExtraBold else FontWeight.Bold
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = chat.time,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (chat.unreadCount > 0) MaterialTheme.colorScheme.primary else Color.Gray,
+                        fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(2.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = chat.lastMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (chat.unreadCount > 0) Color.Black else Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                        fontWeight = if (chat.unreadCount > 0) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                    if (chat.unreadCount > 0) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}
-
-data class ChatPreview(
-    val id: String,
-    val userName: String,
-    val userRole: String,
-    val lastMessage: String,
-    val time: String,
-    val unreadCount: Int,
-    val imageRes: Int
-)
-
-@Preview(showBackground = true)
-@Composable
-fun ChatListScreenPreview() {
-    Ruvo_appTheme {
-        ChatListScreen(onBackClick = {}, onChatClick = {})
-    }
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 88.dp),
+        thickness = 0.5.dp,
+        color = Color.LightGray.copy(alpha = 0.4f)
+    )
 }

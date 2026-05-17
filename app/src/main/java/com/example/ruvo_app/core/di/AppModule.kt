@@ -2,14 +2,8 @@ package com.example.ruvo_app.core.di
 
 import android.content.Context
 import com.example.ruvo_app.data.local.UserPreferencesManager
-import com.example.ruvo_app.data.repository.AuthRepositoryImpl
-import com.example.ruvo_app.data.repository.NotificationRepositoryImpl
-import com.example.ruvo_app.data.repository.ServiceRepositoryImpl
-import com.example.ruvo_app.data.repository.UserRepositoryImpl
-import com.example.ruvo_app.domain.repository.AuthRepository
-import com.example.ruvo_app.domain.repository.NotificationRepository
-import com.example.ruvo_app.domain.repository.ServiceRepository
-import com.example.ruvo_app.domain.repository.UserRepository
+import com.example.ruvo_app.data.repository.*
+import com.example.ruvo_app.domain.repository.*
 import com.example.ruvo_app.domain.usecase.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -40,7 +34,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideUserRepository(): UserRepository = UserRepositoryImpl()
+    fun provideUserRepository(firestore: FirebaseFirestore): UserRepository = UserRepositoryImpl(firestore)
 
     @Provides
     @Singleton
@@ -60,6 +54,18 @@ object AppModule {
     fun provideNotificationRepository(
         firestore: FirebaseFirestore
     ): NotificationRepository = NotificationRepositoryImpl(firestore)
+
+    @Provides
+    @Singleton
+    fun provideChatRepository(
+        firestore: FirebaseFirestore
+    ): ChatRepository = ChatRepositoryImpl(firestore)
+
+    @Provides
+    @Singleton
+    fun provideServiceRequestRepository(
+        firestore: FirebaseFirestore
+    ): ServiceRequestRepository = ServiceRequestRepositoryImpl(firestore)
 
     @Provides
     @Singleton
@@ -116,6 +122,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideValidateUsernameUseCase() = ValidateUsernameUseCase()
+
+    @Provides
+    @Singleton
+    fun provideChangeUserRoleUseCase(repository: UserRepository) = ChangeUserRoleUseCase(repository)
+
+    @Provides
+    @Singleton
+    fun provideGetServicePostsByAuthorUseCase(repository: ServiceRepository) = GetServicePostsByAuthorUseCase(repository)
 }
 
 data class AuthUseCases(

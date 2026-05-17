@@ -3,16 +3,15 @@ package com.example.ruvo_app.features.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.core.component.AdminPostCard
-import com.example.ruvo_app.core.component.AdminServiceCard
 import com.example.ruvo_app.core.component.AdminUserCard
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
 import com.example.ruvo_app.domain.model.*
@@ -42,6 +40,8 @@ fun ModeratorDashboard(
     var selectedAdminTab by remember { mutableIntStateOf(0) }
     
     val allPosts by viewModel.allPosts.collectAsState()
+    val allUsers by viewModel.allUsers.collectAsState()
+    val stats by viewModel.stats.collectAsState()
 
     Scaffold(
         topBar = {
@@ -66,10 +66,7 @@ fun ModeratorDashboard(
         },
         bottomBar = {
             Column {
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = Color.LightGray.copy(alpha = 0.5f)
-                )
+                HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
                 AdminBottomNavigation(selectedAdminTab) { tabIndex ->
                     selectedAdminTab = tabIndex
                     selectedFilter = "Todos"
@@ -88,10 +85,16 @@ fun ModeratorDashboard(
             Spacer(modifier = Modifier.height(16.dp))
             
             when (selectedAdminTab) {
-                0 -> AdminStatisticsScreen()
-                1 -> ServicesManagement(searchQuery, selectedFilter, { searchQuery = it }, { selectedFilter = it })
-                2 -> UsersManagement(searchQuery, selectedFilter, { searchQuery = it }, { selectedFilter = it })
-                3 -> PostsManagement(
+                0 -> AdminStatisticsScreen(stats)
+                1 -> UsersManagement(
+                    query = searchQuery, 
+                    filter = selectedFilter, 
+                    onQueryChange = { searchQuery = it }, 
+                    onFilterChange = { selectedFilter = it },
+                    users = allUsers,
+                    onChangeRole = { userId, newRole -> viewModel.changeUserRole(userId, newRole) }
+                )
+                2 -> PostsManagement(
                     query = searchQuery, 
                     filter = selectedFilter, 
                     onQueryChange = { searchQuery = it }, 
@@ -100,79 +103,23 @@ fun ModeratorDashboard(
                     onApprove = { viewModel.approvePost(it) },
                     onReject = { viewModel.rejectPost(it) }
                 )
-                else -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "Sección en desarrollo")
-                    }
-                }
             }
         }
     }
 }
 
 @Composable
-fun PostsManagement(
-    query: String, 
-    filter: String, 
-    onQueryChange: (String) -> Unit, 
-    onFilterChange: (String) -> Unit,
-    posts: List<ServicePost>,
-    onApprove: (String) -> Unit,
-    onReject: (String) -> Unit
-) {
-    Column {
-        Text(text = "Gestión de Publicaciones", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
-        Text(text = "Modera y aprueba publicaciones, servicios y reportes", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AdminSummaryCard("${posts.size}", "Total", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-            AdminSummaryCard("${posts.count { it.status == PostStatus.PENDIENTE }}", "Pendientes", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-            AdminSummaryCard("${posts.count { it.status == PostStatus.VERIFICADO }}", "Aprobados", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-            AdminSummaryCard("0", "Reportados", MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        AdminSearchBar(query, onQueryChange, "Buscar publicaciones o autores...")
-        Spacer(modifier = Modifier.height(16.dp))
-        AdminFilterRow(filter, onFilterChange, listOf("Todos", "Pendientes", "Aprobados", "Reportados", "Rechazados"))
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val filteredPosts = when(filter) {
-                "Pendientes" -> posts.filter { it.status == PostStatus.PENDIENTE }
-                "Aprobados" -> posts.filter { it.status == PostStatus.VERIFICADO }
-                "Rechazados" -> posts.filter { it.status == PostStatus.RECHAZADO }
-                else -> posts
-            }
-            
-            items(filteredPosts) { post -> 
-                AdminPostCard(
-                    post = post, 
-                    authorName = "Cargando...", // En producción traer del UserDoc
-                    date = "Reciente",
-                    onApprove = { onApprove(post.id) },
-                    onReject = { onReject(post.id) }
-                ) 
-            }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-        }
-    }
-}
-
-// Re-implementing sub-components for better organization
-@Composable
-fun AdminStatisticsScreen() {
+fun AdminStatisticsScreen(stats: AdminStats) {
     Column {
         Text(text = "Reportes Estadísticos", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
         Text(text = "Métricas generales de la plataforma", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         Spacer(modifier = Modifier.height(24.dp))
         
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            StatisticMetricRow("Usuarios Registrados", "150", Color(0xFF4285F4))
-            StatisticMetricRow("Servicios Totales", "45", Color(0xFF34A853))
-            StatisticMetricRow("Publicaciones Realizadas", "230", Color(0xFFFBBC05))
-            StatisticMetricRow("Reportes Activos", "12", Color(0xFFEA4335))
+            StatisticMetricRow("Usuarios Registrados", "${stats.totalUsers}", Color(0xFF4285F4))
+            StatisticMetricRow("Servicios Totales", "${stats.totalServices}", Color(0xFF34A853))
+            StatisticMetricRow("Publicaciones Pendientes", "${stats.pendingPosts}", Color(0xFFFBBC05))
+            StatisticMetricRow("Reportes Activos", "${stats.activeReports}", Color(0xFFEA4335))
         }
     }
 }
@@ -201,100 +148,86 @@ fun StatisticMetricRow(label: String, value: String, color: Color) {
 }
 
 @Composable
-fun ServicesManagement(query: String, filter: String, onQueryChange: (String) -> Unit, onFilterChange: (String) -> Unit) {
-    val mockServices = listOf(
-        Service(title = "Plomería residencial", authorName = "Juan Pérez", location = "Madrid", date = "2026-04-05", price = 50.0, status = ServiceStatus.ACTIVE, description = "", reviewsCount = 0, rating = 0f, category = ""),
-        Service(title = "Clases de matemáticas", authorName = "Maria Garcia", location = "Barcelona", date = "2026-04-06", price = 30.0, priceUnit = "/hora", status = ServiceStatus.ACTIVE, description = "", reviewsCount = 0, rating = 0f, category = ""),
-        Service(title = "Paseo de mascotas", authorName = "Carlos López", location = "Valencia", date = "2026-04-07", price = 15.0, status = ServiceStatus.PENDING, description = "", reviewsCount = 0, rating = 0f, category = ""),
-        Service(title = "Reparación eléctrica", authorName = "Ana Martinez", location = "Sevilla", date = "2026-04-08", price = 40.0, status = ServiceStatus.ACTIVE, description = "", reviewsCount = 0, rating = 0f, category = "")
-    )
-
-    Column {
-        Text(text = "Gestión de Servicios", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
-        Text(text = "Consulta y modifica servicios publicados", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        Spacer(modifier = Modifier.height(24.dp))
-        AdminSearchBar(query, onQueryChange, "Buscar servicios o proveedores...")
-        Spacer(modifier = Modifier.height(16.dp))
-        AdminFilterRow(filter, onFilterChange, listOf("Todos", "Activos", "Pendientes", "Inactivos"))
-        Spacer(modifier = Modifier.height(8.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(mockServices) { service -> AdminServiceCard(service = service) }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-        }
-    }
-}
-
-@Composable
-fun UsersManagement(query: String, filter: String, onQueryChange: (String) -> Unit, onFilterChange: (String) -> Unit) {
+fun UsersManagement(
+    query: String, 
+    filter: String, 
+    onQueryChange: (String) -> Unit, 
+    onFilterChange: (String) -> Unit,
+    users: List<User>,
+    onChangeRole: (String, UserRole) -> Unit
+) {
     var showRoleConfirm by remember { mutableStateOf<User?>(null) }
     
-    val mockUsers = listOf(
-        User(id = "1", fullName = "Juan Pérez", email = "juan.perez@email.com", username = "juanp", status = AccountStatus.ACTIVE, lastActive = "Hace 2 horas", reputation = Reputation(rating = 4.8f), stats = UserStats(activePosts = 12, reportsCount = 0), role = UserRole.USER),
-        User(id = "2", fullName = "María García", email = "maria.garcia@email.com", username = "mariag", status = AccountStatus.ACTIVE, lastActive = "Hace 1 día", reputation = Reputation(rating = 4.9f), stats = UserStats(activePosts = 8, reportsCount = 0), role = UserRole.MODERATOR),
-        User(id = "3", fullName = "Carlos López", email = "carlos.lopez@email.com", username = "carlosl", status = AccountStatus.WARNING, lastActive = "Hace 3 horas", reputation = Reputation(rating = 3.5f), stats = UserStats(activePosts = 5, reportsCount = 3), role = UserRole.USER)
-    )
-
     if (showRoleConfirm != null) {
         val newRole = if (showRoleConfirm!!.role == UserRole.USER) UserRole.MODERATOR else UserRole.USER
         AlertDialog(
             onDismissRequest = { showRoleConfirm = null },
             confirmButton = {
-                Button(onClick = { showRoleConfirm = null }) {
-                    Text("Confirmar")
-                }
+                Button(onClick = { 
+                    onChangeRole(showRoleConfirm!!.id, newRole)
+                    showRoleConfirm = null 
+                }) { Text("Confirmar") }
             },
             dismissButton = {
-                TextButton(onClick = { showRoleConfirm = null }) {
-                    Text("Cancelar")
-                }
+                TextButton(onClick = { showRoleConfirm = null }) { Text("Cancelar") }
             },
-            title = { Text("Cambiar Rol de Usuario") },
-            text = { 
-                Text("¿Estás seguro de cambiar el rol de ${showRoleConfirm!!.fullName} a ${newRole.name}? \n\n" +
-                     "Esta acción modificará los permisos de acceso del usuario a las funciones administrativas.") 
-            }
+            title = { Text("Cambiar Rol") },
+            text = { Text("¿Deseas cambiar el rol de ${showRoleConfirm!!.fullName} a ${newRole.name}?") }
         )
     }
 
     Column {
         Text(text = "Gestión de Usuarios", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
-        Text(text = "Administra y modera usuarios de la plataforma", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AdminSummaryCard("3", "Activos", Color(0xFF166534), Modifier.weight(1f))
-            AdminSummaryCard("1", "Advertencias", Color(0xFF854D0E), Modifier.weight(1f))
-            AdminSummaryCard("1", "Bloqueados", Color(0xFF991B1B), Modifier.weight(1f))
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        AdminSearchBar(query, onQueryChange, "Buscar usuarios por nombre o email...")
-        Spacer(modifier = Modifier.height(16.dp))
-        AdminFilterRow(filter, onFilterChange, listOf("Todos", "Activos", "Advertencias", "Bloqueados"))
+        AdminSearchBar(query, onQueryChange, "Buscar usuarios...")
         Spacer(modifier = Modifier.height(8.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(mockUsers) { user -> 
-                AdminUserCard(
-                    user = user,
-                    onChangeRole = { showRoleConfirm = user }
-                ) 
+        AdminFilterRow(filter, onFilterChange, listOf("Todos", "Activos", "Bloqueados"))
+        
+        LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val filtered = users.filter { 
+                it.fullName.contains(query, ignoreCase = true) || it.email.contains(query, ignoreCase = true)
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            items(filtered) { user -> 
+                AdminUserCard(user = user, onChangeRole = { showRoleConfirm = user }) 
+            }
         }
     }
 }
 
 @Composable
-fun AdminSummaryCard(count: String, label: String, contentColor: Color, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.height(70.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(text = count, color = contentColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(text = label, color = Color.Gray, fontSize = 10.sp)
+fun PostsManagement(
+    query: String, 
+    filter: String, 
+    onQueryChange: (String) -> Unit, 
+    onFilterChange: (String) -> Unit,
+    posts: List<ServicePost>,
+    onApprove: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
+    Column {
+        Text(text = "Moderación", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
+        AdminSearchBar(query, onQueryChange, "Buscar publicaciones...")
+        Spacer(modifier = Modifier.height(8.dp))
+        AdminFilterRow(filter, onFilterChange, listOf("Todos", "Pendientes", "Aprobados"))
+        
+        LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val filtered = posts.filter { 
+                val matchesQuery = it.title.contains(query, ignoreCase = true)
+                val matchesFilter = when(filter) {
+                    "Pendientes" -> it.status == PostStatus.PENDIENTE
+                    "Aprobados" -> it.status == PostStatus.VERIFICADO
+                    else -> true
+                }
+                matchesQuery && matchesFilter
+            }
+            items(filtered) { post -> 
+                AdminPostCard(
+                    post = post, 
+                    authorName = "Proveedor", 
+                    date = "Reciente",
+                    onApprove = { onApprove(post.id) },
+                    onReject = { onReject(post.id) }
+                ) 
+            }
         }
     }
 }
@@ -305,32 +238,21 @@ fun AdminSearchBar(query: String, onQueryChange: (String) -> Unit, placeholder: 
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(placeholder, color = Color.LightGray, fontSize = 14.sp) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.LightGray) },
+        placeholder = { Text(placeholder) },
+        leadingIcon = { Icon(Icons.Default.Search, null) },
         shape = RoundedCornerShape(12.dp),
-        singleLine = true,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color.LightGray,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White
-        )
+        singleLine = true
     )
 }
 
 @Composable
 fun AdminFilterRow(selected: String, onSelect: (String) -> Unit, filters: List<String>) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
         items(filters) { filter ->
             FilterChip(
                 selected = selected == filter,
                 onClick = { onSelect(filter) },
-                label = { Text(filter, fontSize = 12.sp) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFF0047FF),
-                    selectedLabelColor = Color.White
-                ),
-                border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected == filter, borderColor = Color.LightGray),
+                label = { Text(filter) },
                 shape = RoundedCornerShape(12.dp)
             )
         }
@@ -339,53 +261,19 @@ fun AdminFilterRow(selected: String, onSelect: (String) -> Unit, filters: List<S
 
 @Composable
 fun AdminBottomNavigation(selectedTab: Int, onTabSelected: (Int) -> Unit) {
-    NavigationBar(
-        containerColor = Color.White, 
-        tonalElevation = 0.dp,
-        modifier = Modifier.height(80.dp)
-    ) {
-        val adminItems = listOf(
-            NavigationItem("Estadísticas", Icons.Default.BarChart, Icons.Default.BarChart),
-            NavigationItem("Servicios", Icons.Default.Description, Icons.Default.Description),
-            NavigationItem("Usuarios", Icons.Default.Group, Icons.Default.Group),
-            NavigationItem("Publicaciones", Icons.Default.Settings, Icons.Default.Settings)
+    NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
+        val items = listOf(
+            Triple("Estadísticas", Icons.Default.BarChart, 0),
+            Triple("Usuarios", Icons.Default.Group, 1),
+            Triple("Moderación", Icons.Default.Rule, 2)
         )
-
-        adminItems.forEachIndexed { index, item ->
+        items.forEach { (name, icon, index) ->
             NavigationBarItem(
                 selected = selectedTab == index,
                 onClick = { onTabSelected(index) },
-                icon = {
-                    Icon(
-                        imageVector = item.selectedIcon,
-                        contentDescription = item.name,
-                        modifier = Modifier.size(28.dp)
-                    )
-                },
-                label = { 
-                    Text(
-                        text = item.name, 
-                        fontSize = 10.sp,
-                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    ) 
-                },
-                alwaysShowLabel = true,
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = Color.Gray,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedTextColor = Color.Gray,
-                    indicatorColor = Color.Transparent
-                )
+                icon = { Icon(icon, contentDescription = name) },
+                label = { Text(name, fontSize = 10.sp) }
             )
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ModeratorDashboardPreview() {
-    Ruvo_appTheme { ModeratorDashboard() }
 }

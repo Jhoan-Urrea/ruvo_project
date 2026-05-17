@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +10,17 @@ plugins {
     alias(libs.plugins.kapt)
     alias(libs.plugins.hilt)
 }
+
+// Lectura segura de local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
+val stadiaApiKey: String = localProperties.getProperty("STADIA_API_KEY") 
+    ?: System.getenv("STADIA_API_KEY") 
+    ?: ""
 
 android {
     namespace = "com.example.ruvo_app"
@@ -20,6 +34,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Inyección de la clave en BuildConfig
+        buildConfigField("String", "STADIA_API_KEY", "\"$stadiaApiKey\"")
     }
 
     buildTypes {
@@ -43,6 +60,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true // Habilitamos la generación de BuildConfig
     }
 }
 
@@ -68,6 +86,9 @@ dependencies {
     implementation(libs.cloudinary.android)
     implementation(libs.coil.compose)
     implementation(libs.play.services.location)
+    
+    // MapLibre
+    implementation(libs.maplibre.android)
     
     // DataStore
     implementation(libs.androidx.datastore.preferences)

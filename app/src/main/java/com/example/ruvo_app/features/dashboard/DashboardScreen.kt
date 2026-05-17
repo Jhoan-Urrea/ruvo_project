@@ -23,17 +23,22 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
 import com.example.ruvo_app.features.notifications.NotificationsScreen
 import com.example.ruvo_app.features.profile.ProfileScreen
 import com.example.ruvo_app.features.search.SearchScreen
+import com.example.ruvo_app.core.component.ServicePostCard
+import com.example.ruvo_app.domain.model.ServicePost
+import com.example.ruvo_app.core.component.LocationDropdown
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,10 +50,16 @@ fun DashboardScreen(
     onServiceClick: (Screen.DetalleServicio) -> Unit = {},
     onChatListClick: () -> Unit = {},
     isAdmin: Boolean = false,
-    initialSuccessMessage: String? = null
+    initialSuccessMessage: String? = null,
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
     var selectedCategory by remember { mutableStateOf("Todo") }
     var selectedTab by remember { mutableIntStateOf(0) }
+    
+    val services by viewModel.services.collectAsState()
+    val countries by viewModel.countries.collectAsState()
+    val regions by viewModel.regions.collectAsState()
+    val cities by viewModel.cities.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -70,7 +81,7 @@ fun DashboardScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.isotipo),
+                                painter = painterResource(id = R.drawable.logo_ruvo),
                                 contentDescription = null,
                                 modifier = Modifier.size(30.dp)
                             )
@@ -131,12 +142,38 @@ fun DashboardScreen(
                         selectedCategory = selectedCategory,
                         onCategorySelect = { selectedCategory = it },
                         onAddClick = onAddPostClick,
-                        onServiceClick = onServiceClick
+                        onServiceClick = onServiceClick,
+                        services = services,
+                        countries = countries,
+                        regions = regions,
+                        cities = cities
                     )
                 }
                 1 -> SearchScreen(onServiceClick = onServiceClick)
                 2 -> NotificationsScreen()
-                3 -> ProfileScreen(onSettingsClick = onSettingsClick)
+                3 -> ProfileScreen(
+                    onSettingsClick = onSettingsClick,
+                    onServiceClick = { post ->
+                        onServiceClick(
+                            Screen.DetalleServicio(
+                                id = post.id,
+                                title = post.title,
+                                description = post.description,
+                                category = post.category.name,
+                                location = post.addressText,
+                                priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
+                                providerId = post.authorId,
+                                providerName = "Proveedor",
+                                providerSpecialty = "Especialista",
+                                providerImageRes = R.drawable.isotipo,
+                                rating = 4.5f,
+                                reviewsCount = 10,
+                                imageRes = R.drawable.card_service,
+                                imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
+                            )
+                        )
+                    }
+                )
                 else -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(text = "Pantalla en construcción")
@@ -147,81 +184,26 @@ fun DashboardScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeContent(
     selectedCategory: String, 
     onCategorySelect: (String) -> Unit,
     onAddClick: () -> Unit,
-    onServiceClick: (Screen.DetalleServicio) -> Unit
+    onServiceClick: (Screen.DetalleServicio) -> Unit,
+    services: List<ServicePost>,
+    countries: List<String>,
+    regions: List<String>,
+    cities: List<String>
 ) {
-    val services = listOf(
-        Service(
-            id = "1",
-            title = "Tutor de conceptos matemáticos",
-            description = "Licenciado en Matematicas de la Universidad La Liberta del Mundo Imaginario",
-            category = "Educación",
-            location = "Armenia, Quindío",
-            priceRange = "$ 30.000 - $60.000 x Hora",
-            userName = "Juan Hurtado",
-            userSpecialty = "Licenciado",
-            imageRes = R.drawable.tutor
-        ),
-        Service(
-            id = "2",
-            title = "Mudanzas Express",
-            description = "Servicio de mudanzas nacionales e internacionales con el mejor cuidado.",
-            category = "Hogar",
-            location = "Bogotá, Cundinamarca",
-            priceRange = "$ 150.000 - $500.000",
-            userName = "Camilo Ruiz",
-            userSpecialty = "Transportador",
-            imageRes = R.drawable.mudanza
-        ),
-        Service(
-            id = "3",
-            title = "Plomería Profesional",
-            description = "Arreglo de tuberías, grifería y filtraciones. Servicio garantizado 24/7.",
-            category = "Hogar",
-            location = "Medellín, Antioquia",
-            priceRange = "$ 50.000 - $120.000",
-            userName = "Andrés López",
-            userSpecialty = "Plomero certificado",
-            imageRes = R.drawable.plomero
-        ),
-        Service(
-            id = "4",
-            title = "Limpieza de Hogar",
-            description = "Limpieza profunda de casas y apartamentos. Personal confiable y honesto.",
-            category = "Hogar",
-            location = "Cali, Valle",
-            priceRange = "$ 60.000 - $90.000",
-            userName = "Marta Gómez",
-            userSpecialty = "Auxiliar de servicios",
-            imageRes = R.drawable.limpieza
-        ),
-        Service(
-            id = "5",
-            title = "Paseador de Perros",
-            description = "Paseos recreativos para todas las razas. Amante de los animales.",
-            category = "Mascotas",
-            location = "Pereira, Risaralda",
-            priceRange = "$ 15.000 - $25.000 x Hora",
-            userName = "Diego Marín",
-            userSpecialty = "Entrenador Canino",
-            imageRes = R.drawable.paseador_perros
-        ),
-        Service(
-            id = "6",
-            title = "Servicio Técnico PC",
-            description = "Reparación de hardware y software, mantenimiento preventivo y correctivo.",
-            category = "Educación",
-            location = "Manizales, Caldas",
-            priceRange = "$ 40.000 - $100.000",
-            userName = "Kevin Castro",
-            userSpecialty = "Técnico en sistemas",
-            imageRes = R.drawable.servicio_tecnico
-        )
-    )
+    var selectedCountry by remember { mutableStateOf("País") }
+    var countryExpanded by remember { mutableStateOf(false) }
+
+    var selectedRegion by remember { mutableStateOf("Región") }
+    var regionExpanded by remember { mutableStateOf(false) }
+
+    var selectedCity by remember { mutableStateOf("Ciudad") }
+    var cityExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -229,16 +211,14 @@ fun HomeContent(
                 .fillMaxSize()
                 .background(Color(0xFFF8F8F8))
         ) {
-            // Sección Superior Blanca
             Column(modifier = Modifier.background(Color.White)) {
-                // Categorías
                 Text(
                     text = stringResource(R.string.dashboard_categories),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                val categories = listOf(
+                val categoriesList = listOf(
                     CategoryItem("Todo", null),
                     CategoryItem("Hogar", "🏠"),
                     CategoryItem("Educación", "📚"),
@@ -255,7 +235,7 @@ fun HomeContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(categories) { category ->
+                    items(categoriesList) { category ->
                         val isSelected = selectedCategory == category.name
                         FilterChip(
                             selected = isSelected,
@@ -271,7 +251,7 @@ fun HomeContent(
                                     }
                                     Text(
                                         text = category.name,
-                                        fontSize = 11.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 }
@@ -288,55 +268,177 @@ fun HomeContent(
                     }
                 }
 
-                // Filtros de ubicación
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
 
-                    LocationDropdown("Todos", Modifier.weight(1.2f))
-                    LocationDropdown("Región", Modifier.weight(1f))
-                    LocationDropdown("Ciudad", Modifier.weight(1f))
+                    // Country Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = countryExpanded,
+                        onExpandedChange = { countryExpanded = !countryExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        TextField(
+                            value = selectedCountry,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryExpanded) },
+                            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                focusedContainerColor = Color(0xFFF5F5F5),
+                                unfocusedContainerColor = Color(0xFFF5F5F5),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp),
+                            textStyle = TextStyle(fontSize = 10.sp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = countryExpanded,
+                            onDismissRequest = { countryExpanded = false }
+                        ) {
+                            countries.forEach { country ->
+                                DropdownMenuItem(
+                                    text = { Text(country, fontSize = 12.sp) },
+                                    onClick = {
+                                        selectedCountry = country
+                                        countryExpanded = false
+                                        selectedRegion = "Región"
+                                        selectedCity = "Ciudad"
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Region Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = regionExpanded,
+                        onExpandedChange = { regionExpanded = !regionExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        TextField(
+                            value = selectedRegion,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = regionExpanded) },
+                            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                focusedContainerColor = Color(0xFFF5F5F5),
+                                unfocusedContainerColor = Color(0xFFF5F5F5),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp),
+                            textStyle = TextStyle(fontSize = 10.sp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = regionExpanded,
+                            onDismissRequest = { regionExpanded = false }
+                        ) {
+                            regions.forEach { region ->
+                                DropdownMenuItem(
+                                    text = { Text(region, fontSize = 12.sp) },
+                                    onClick = {
+                                        selectedRegion = region
+                                        regionExpanded = false
+                                        selectedCity = "Ciudad"
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // City Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = cityExpanded,
+                        onExpandedChange = { cityExpanded = !cityExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        TextField(
+                            value = selectedCity,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityExpanded) },
+                            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                                focusedContainerColor = Color(0xFFF5F5F5),
+                                unfocusedContainerColor = Color(0xFFF5F5F5),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp),
+                            textStyle = TextStyle(fontSize = 10.sp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = cityExpanded,
+                            onDismissRequest = { cityExpanded = false }
+                        ) {
+                            cities.forEach { city ->
+                                DropdownMenuItem(
+                                    text = { Text(city, fontSize = 12.sp) },
+                                    onClick = {
+                                        selectedCity = city
+                                        cityExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Listado de Tarjetas
+            // Listado de Tarjetas Reales con Filtrado Compuesto
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val filteredServices = if (selectedCategory == "Todo") {
-                    services
-                } else {
-                    services.filter { it.category == selectedCategory }
+                val filteredServices = services.filter { post ->
+                    val matchesCategory = if (selectedCategory == "Todo") true 
+                                         else post.category.name.equals(selectedCategory, ignoreCase = true)
+                    
+                    val matchesCountry = if (selectedCountry == "País") true
+                                         else post.country.equals(selectedCountry, ignoreCase = true)
+
+                    val matchesRegion = if (selectedRegion == "Región") true
+                                        else post.region.equals(selectedRegion, ignoreCase = true)
+                    
+                    val matchesCity = if (selectedCity == "Ciudad") true 
+                                      else post.city.equals(selectedCity, ignoreCase = true)
+                    
+                    matchesCategory && matchesCountry && matchesRegion && matchesCity
                 }
 
-                items(filteredServices) { service ->
-                    ServiceCard(
-                        service = service,
+                items(filteredServices) { post ->
+                    ServicePostCard(
+                        post = post,
+                        authorName = "Proveedor",
+                        authorRole = "Verificado",
                         onClick = {
                             onServiceClick(
                                 Screen.DetalleServicio(
-                                    id = service.id,
-                                    title = service.title,
-                                    description = service.description,
-                                    category = service.category,
-                                    location = service.location,
-                                    priceRange = service.priceRange,
-                                    providerId = "1",
-                                    providerName = service.userName,
-                                    providerSpecialty = service.userSpecialty,
+                                    id = post.id,
+                                    title = post.title,
+                                    description = post.description,
+                                    category = post.category.name,
+                                    location = post.addressText,
+                                    priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
+                                    providerId = post.authorId,
+                                    providerName = "Proveedor",
+                                    providerSpecialty = "Especialista",
                                     providerImageRes = R.drawable.isotipo,
                                     rating = 4.5f,
                                     reviewsCount = 10,
-                                    imageRes = service.imageRes
+                                    imageRes = R.drawable.card_service,
+                                    imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
                                 )
                             )
                         }
@@ -345,7 +447,6 @@ fun HomeContent(
             }
         }
 
-        // FAB en Inicio
         FloatingActionButton(
             onClick = onAddClick,
             containerColor = Color(0xFF0047FF),
@@ -357,205 +458,6 @@ fun HomeContent(
                 .size(64.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_create), modifier = Modifier.size(32.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ServiceCard(service: Service, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column {
-            // Imagen con Badges
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-            ) {
-                Image(
-                    painter = painterResource(id = service.imageRes),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                // Badge Categoría
-                Surface(
-                    modifier = Modifier.padding(12.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFD3E0FF).copy(alpha = 0.9f)
-                ) {
-                    Text(
-                        text = service.category,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        fontSize = 12.sp,
-                        color = Color(0xFF0047FF),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Badge Destacado
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF0047FF)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(R.string.dashboard_featured),
-                            fontSize = 12.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            // Contenido
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = service.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = Color(0xFFE0F7E9)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.dashboard_verified),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            fontSize = 10.sp,
-                            color = Color(0xFF2ECC71),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = service.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = service.location, fontSize = 11.sp, color = Color.Gray)
-                    }
-
-                    Text(
-                        text = service.priceRange,
-                        fontSize = 12.sp,
-                        color = Color(0xFF0047FF),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Footer (Usuario y Stats)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = R.drawable.isotipo),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.LightGray)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(text = service.userName, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Text(text = service.userSpecialty, fontSize = 10.sp, color = Color.Gray)
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
-                        Text(text = " ${service.commentsCount}", fontSize = 12.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Icon(Icons.Outlined.FavoriteBorder, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
-                        Text(text = " ${service.likesCount}", fontSize = 12.sp, color = Color.Gray)
-                    }
-                }
-            }
-        }
-    }
-}
-
-data class Service(
-    val id: String,
-    val title: String,
-    val description: String,
-    val category: String,
-    val location: String,
-    val priceRange: String,
-    val userName: String,
-    val userSpecialty: String,
-    val imageRes: Int,
-    val isVerified: Boolean = true,
-    val isFeatured: Boolean = true,
-    val commentsCount: Int = 5,
-    val likesCount: Int = 20
-)
-
-@Composable
-fun LocationDropdown(text: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.height(36.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = Color(0xFFF5F5F5),
-        border = BorderStroke(0.5.dp, Color.LightGray)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = text, fontSize = 12.sp, color = Color.Gray)
-            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -608,11 +510,3 @@ fun BottomNavigationBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
 
 data class CategoryItem(val name: String, val emoji: String?)
 data class NavigationItem(val name: String, val selectedIcon: ImageVector, val unselectedIcon: ImageVector)
-
-@Preview(showBackground = true)
-@Composable
-fun DashboardScreenPreview() {
-    Ruvo_appTheme {
-        DashboardScreen()
-    }
-}

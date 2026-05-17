@@ -41,7 +41,7 @@ import java.util.Locale
 @Composable
 fun ProfileScreen(
     onSettingsClick: () -> Unit = {},
-    onServiceClick: (String) -> Unit = {},
+    onServiceClick: (ServicePost) -> Unit = {},
     viewModel: ProfileViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -73,7 +73,7 @@ fun ProfileContent(
     services: List<ServicePost>,
     scrollState: androidx.compose.foundation.ScrollState,
     onSettingsClick: () -> Unit,
-    onServiceClick: (String) -> Unit
+    onServiceClick: (ServicePost) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -123,7 +123,7 @@ fun ProfileContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.isotipo),
+                        painter = painterResource(id = R.drawable.logo_ruvo),
                         contentDescription = "Profile Picture",
                         modifier = Modifier
                             .size(80.dp)
@@ -161,11 +161,11 @@ fun ProfileContent(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(Color.White)
-                .padding(24.dp)
+                .padding(top = 24.dp, bottom = 24.dp)
         ) {
             // Level Card
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White,
                 tonalElevation = 2.dp,
@@ -207,7 +207,7 @@ fun ProfileContent(
 
             // Totals Row
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 StatItem(icon = Icons.Outlined.ChatBubbleOutline, count = "${services.size}", label = stringResource(R.string.profile_total_services), iconColor = Color(0xFF4CAF50))
@@ -219,24 +219,28 @@ fun ProfileContent(
             // Estado de servicios
             Text(
                 text = stringResource(R.string.profile_service_status),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            StatusRow(icon = Icons.Default.CheckCircleOutline, label = stringResource(R.string.profile_active), count = "${user.stats.activePosts}", color = Color(0xFF4CAF50))
-            StatusRow(icon = Icons.Default.AccessTime, label = stringResource(R.string.profile_pending), count = "${user.stats.pendingVerification}", color = Color(0xFFFFC107))
-            StatusRow(icon = Icons.Default.Inventory2, label = stringResource(R.string.profile_finished), count = "${user.stats.finishedPosts}", color = Color(0xFF9C27B0))
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                StatusRow(icon = Icons.Default.CheckCircleOutline, label = stringResource(R.string.profile_active), count = "${user.stats.activePosts}", color = Color(0xFF4CAF50))
+                StatusRow(icon = Icons.Default.AccessTime, label = stringResource(R.string.profile_pending), count = "${user.stats.pendingVerification}", color = Color(0xFFFFC107))
+                StatusRow(icon = Icons.Default.Inventory2, label = stringResource(R.string.profile_finished), count = "${user.stats.finishedPosts}", color = Color(0xFF9C27B0))
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // Logros e insignias
             Text(
                 text = stringResource(R.string.profile_achievements),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 8.dp)
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp)
             ) {
                 items(user.reputation.badges.ifEmpty { listOf("Sin insignias") }) { badge ->
                     AchievementItem(badge)
@@ -247,19 +251,25 @@ fun ProfileContent(
             
             Text(
                 text = stringResource(R.string.profile_my_services),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
             
             Spacer(modifier = Modifier.height(16.dp))
             
             // List of real services from Firestore
-            services.forEach { post ->
-                ServicePostCard(
-                    post = post,
-                    authorName = user.fullName,
-                    authorRole = user.reputation.level.name,
-                    onClick = { onServiceClick(post.id) }
-                )
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                services.forEach { post ->
+                    ServicePostCard(
+                        post = post,
+                        authorName = user.fullName,
+                        authorRole = user.reputation.level.name,
+                        onClick = { onServiceClick(post) }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(100.dp))

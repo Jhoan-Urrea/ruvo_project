@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ModeComment
+import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,10 +37,12 @@ fun ServicePostCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
+    // Lógica para etiqueta "Reciente" (menos de 48 horas)
+    val isRecent = System.currentTimeMillis() - post.createdAt < 48 * 60 * 60 * 1000
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -71,22 +74,60 @@ fun ServicePostCard(
                     )
                 }
 
-                // Category Badge
-                Surface(
+                // Badges Row
+                Row(
                     modifier = Modifier
-                        .padding(12.dp)
-                        .align(Alignment.TopStart),
-                    color = Color(0xFFE8F0FE).copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(16.dp)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = post.category.name.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFF0047FF),
-                            fontWeight = FontWeight.Bold
+                    // Categoria
+                    Surface(
+                        color = Color(0xFFE8F0FE).copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = post.category.name.lowercase().replaceFirstChar { it.uppercase() },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF0047FF),
+                                fontWeight = FontWeight.Bold
+                            )
                         )
-                    )
+                    }
+
+                    // Destacado o Reciente
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (post.isFeatured) {
+                            Surface(
+                                color = Color(0xFF0047FF),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Destacado", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else if (isRecent) {
+                            Surface(
+                                color = Color(0xFFFF5722),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.NewReleases, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Reciente", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Status Badge (Visualización para el autor)
@@ -104,10 +145,10 @@ fun ServicePostCard(
                 ) {
                     Text(
                         text = when(post.status) {
-                            PostStatus.PENDIENTE -> "Pendiente de aprobación"
+                            PostStatus.PENDIENTE -> "En revisión"
                             PostStatus.VERIFICADO -> "Publicado"
                             PostStatus.RECHAZADO -> "Rechazado"
-                            else -> "Desconocido"
+                            else -> ""
                         },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         color = Color.White,
@@ -121,15 +162,37 @@ fun ServicePostCard(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
-                Text(
-                    text = post.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = post.title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    if (post.status == PostStatus.VERIFICADO) {
+                        Surface(
+                            color = Color(0xFFDCFCE7),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "Verificado",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                fontSize = 10.sp,
+                                color = Color(0xFF166534),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -157,9 +220,12 @@ fun ServicePostCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = post.addressText,
+                            text = post.city.ifEmpty { post.addressText },
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 120.dp)
                         )
                     }
 

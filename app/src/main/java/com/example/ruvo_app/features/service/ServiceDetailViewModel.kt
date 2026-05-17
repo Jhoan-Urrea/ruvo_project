@@ -1,4 +1,4 @@
-package com.example.ruvo_app.features.dashboard
+package com.example.ruvo_app.features.service
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,11 +25,9 @@ class ServiceDetailViewModel @Inject constructor(
 
     fun loadService(postId: String) {
         viewModelScope.launch {
-            // Escuchamos los cambios en tiempo real del post específico
             serviceRepository.getAllServicePosts().collect { posts ->
                 val post = posts.find { it.id == postId }
                 if (post != null) {
-                    // Cargamos la info del autor (esto podría optimizarse con caché)
                     userRepository.getUserProfile(post.authorId).collect { userResult ->
                         userResult.onSuccess { author ->
                             _uiState.value = ServiceDetailUiState.Success(
