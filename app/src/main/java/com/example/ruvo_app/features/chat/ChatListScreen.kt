@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.component.ChatListShimmer
 
@@ -32,7 +33,7 @@ import com.example.ruvo_app.core.component.ChatListShimmer
 @Composable
 fun ChatListScreen(
     onBackClick: () -> Unit,
-    onChatClick: (String, String, String, Int) -> Unit, // Updated to pass more data if needed
+    onChatClick: (String, String, String, Int, String?) -> Unit, // Updated signature
     viewModel: ChatListViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -101,7 +102,7 @@ fun ChatListScreen(
                     items(filteredChats) { chat ->
                         ChatItem(
                             chat = chat,
-                            onClick = { onChatClick(chat.id, chat.userName, chat.userRole, chat.imageRes) }
+                            onClick = { onChatClick(chat.id, chat.userName, chat.userRole, chat.imageRes, chat.imageUrl) }
                         )
                     }
                 }
@@ -125,16 +126,28 @@ fun ChatItem(chat: ChatPreview, onClick: () -> Unit) {
         ) {
             // Avatar with online status indicator
             Box(modifier = Modifier.size(56.dp)) {
-                Image(
-                    painter = painterResource(id = chat.imageRes),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(Color(0xFFF0F0F0)),
-                    contentScale = ContentScale.Crop
-                )
-                // We could add logic for online status here
+                if (chat.imageUrl != null) {
+                    AsyncImage(
+                        model = chat.imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(Color(0xFFF0F0F0)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = chat.imageRes),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(Color(0xFFF0F0F0)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
                 Box(
                     modifier = Modifier
                         .size(14.dp)

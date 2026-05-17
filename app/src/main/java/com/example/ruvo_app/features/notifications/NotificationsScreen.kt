@@ -7,75 +7,36 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.TaskAlt
-import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.R
+import com.example.ruvo_app.domain.model.Notification
+import com.example.ruvo_app.domain.model.NotificationType
+import java.text.SimpleDateFormat
+import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val notifications = remember {
-        mutableStateListOf(
-            Notification(
-                id = 1,
-                title = context.getString(R.string.notification_new_service),
-                description = context.getString(R.string.notification_new_service_desc),
-                time = context.getString(R.string.notification_time_ago, "7 horas"),
-                icon = Icons.Outlined.Notifications,
-                iconBackground = Color(0xFFE8EAF6),
-                isRead = false
-            ),
-            Notification(
-                id = 2,
-                title = context.getString(R.string.notification_new_comment),
-                description = context.getString(R.string.notification_new_comment_desc, "Maria Gonzales"),
-                time = context.getString(R.string.notification_time_ago, "3 minutos"),
-                icon = Icons.Outlined.ChatBubbleOutline,
-                iconBackground = Color(0xFFE8F5E9),
-                isRead = false
-            ),
-            Notification(
-                id = 3,
-                title = context.getString(R.string.notification_service_verified),
-                description = context.getString(R.string.notification_service_verified_desc, "Asesor en contabilidad"),
-                time = context.getString(R.string.notification_time_ago, "3 minutos"),
-                icon = Icons.Outlined.TaskAlt,
-                iconBackground = Color(0xFFE3F2FD),
-                isRead = false
-            ),
-            Notification(
-                id = 4,
-                title = context.getString(R.string.notification_achievement),
-                description = context.getString(R.string.notification_achievement_desc, "Intermedio"),
-                time = context.getString(R.string.notification_time_ago, "3 minutos"),
-                icon = Icons.Outlined.EmojiEvents,
-                iconBackground = Color(0xFFFFF3E0),
-                isRead = false
-            )
-        )
-    }
-
+fun NotificationsScreen(
+    viewModel: NotificationsViewModel = hiltViewModel()
+) {
+    val notifications by viewModel.notifications.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val unreadCount = notifications.count { !it.isRead }
 
     Column(
@@ -93,7 +54,7 @@ fun NotificationsScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 24.dp, bottom = 16.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         // Sub-header
@@ -129,14 +90,8 @@ fun NotificationsScreen() {
                 }
             }
 
-            if (notifications.any { !it.isRead }) {
-                TextButton(onClick = {
-                    notifications.forEachIndexed { index, notification ->
-                        if (!notification.isRead) {
-                            notifications[index] = notification.copy(isRead = true)
-                        }
-                    }
-                }) {
+            if (unreadCount > 0) {
+                TextButton(onClick = { viewModel.markAllAsRead() }) {
                     Text(
                         text = stringResource(R.string.notifications_mark_all_read),
                         color = Color(0xFF3F51B5),
@@ -150,32 +105,68 @@ fun NotificationsScreen() {
         Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider(thickness = 1.dp, color = Color.LightGray.copy(alpha = 0.5f))
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(notifications) { notification ->
-                NotificationItem(
-                    notification = notification,
-                    onClick = {
-                        val index = notifications.indexOf(notification)
-                        if (index != -1) {
-                            notifications[index] = notification.copy(isRead = true)
-                        }
-                    }
-                )
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-            
-            item {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.KeyboardArrowUp,
-                        contentDescription = null,
-                        tint = Color.Gray
+        } else if (notifications.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Outlined.NotificationsOff, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("No tienes notificaciones", color = Color.Gray)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(notifications, key = { it.id }) { notification ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart) {
+                                viewModel.deleteNotification(notification.id)
+                                true
+                            } else false
+                        }
                     )
+
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        backgroundContent = {
+                            val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) Color.Red else Color.Transparent
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(color)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                Icon(Icons.Default.Delete, "Eliminar", tint = Color.White)
+                            }
+                        }
+                    ) {
+                        NotificationItem(
+                            notification = notification,
+                            onClick = { viewModel.markAsRead(notification.id) }
+                        )
+                    }
+                }
+                
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.KeyboardArrowUp,
+                            contentDescription = null,
+                            tint = Color.Gray
+                        )
+                    }
                 }
             }
         }
@@ -184,13 +175,37 @@ fun NotificationsScreen() {
 
 @Composable
 fun NotificationItem(notification: Notification, onClick: () -> Unit) {
+    val icon = when (notification.type) {
+        NotificationType.NUEVA_PUBLICACION_ZONA -> Icons.Outlined.Notifications
+        NotificationType.NUEVO_COMENTARIO -> Icons.Outlined.ChatBubbleOutline
+        NotificationType.ESTADO_ACTUALIZADO -> Icons.Outlined.TaskAlt
+        NotificationType.LOGRO_DESBLOQUEADO -> Icons.Outlined.EmojiEvents
+    }
+
+    val iconBackground = when (notification.type) {
+        NotificationType.NUEVA_PUBLICACION_ZONA -> Color(0xFFE8EAF6)
+        NotificationType.NUEVO_COMENTARIO -> Color(0xFFE8F5E9)
+        NotificationType.ESTADO_ACTUALIZADO -> Color(0xFFE3F2FD)
+        NotificationType.LOGRO_DESBLOQUEADO -> Color(0xFFFFF3E0)
+    }
+
+    val timeStr = remember(notification.timestamp) {
+        val sdf = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
+        sdf.format(Date(notification.timestamp))
+    }
+
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = if (notification.isRead) Color.White else Color(0xFFF0F2FF)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = if (notification.isRead) Color.LightGray.copy(alpha = 0.5f) else Color(0xFF3F51B5).copy(alpha = 0.2f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -203,13 +218,13 @@ fun NotificationItem(notification: Notification, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(notification.iconBackground),
+                    .background(iconBackground),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = notification.icon,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = Color(0xFF3F51B5), // Using a blue shade for icons as per image
+                    tint = Color(0xFF3F51B5),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -218,25 +233,19 @@ fun NotificationItem(notification: Notification, onClick: () -> Unit) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = notification.title,
+                    text = notification.message,
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
+                        fontSize = 14.sp
                     ),
-                    color = Color.Black
+                    color = Color.Black,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = notification.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 13.sp
-                )
-                Text(
-                    text = notification.time,
+                    text = timeStr,
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.LightGray,
+                    color = Color.Gray,
                     fontSize = 11.sp
                 )
             }
@@ -251,10 +260,4 @@ fun NotificationItem(notification: Notification, onClick: () -> Unit) {
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun NotificationsScreenPreview() {
-    NotificationsScreen()
 }

@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -39,6 +38,9 @@ import com.example.ruvo_app.features.search.SearchScreen
 import com.example.ruvo_app.core.component.ServicePostCard
 import com.example.ruvo_app.domain.model.ServicePost
 import com.example.ruvo_app.core.component.LocationDropdown
+import com.example.ruvo_app.core.component.DashboardShimmer
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +51,8 @@ fun DashboardScreen(
     onAdminDetailedClick: () -> Unit = {},
     onServiceClick: (Screen.DetalleServicio) -> Unit = {},
     onChatListClick: () -> Unit = {},
+    onSolicitudesClick: () -> Unit = {},
+    onMisTrabajosClick: () -> Unit = {},
     isAdmin: Boolean = false,
     initialSuccessMessage: String? = null,
     viewModel: DashboardViewModel = hiltViewModel()
@@ -60,6 +64,8 @@ fun DashboardScreen(
     val countries by viewModel.countries.collectAsState()
     val regions by viewModel.regions.collectAsState()
     val cities by viewModel.cities.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val maxPriceFilter by viewModel.maxPriceFilter.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -146,13 +152,18 @@ fun DashboardScreen(
                         services = services,
                         countries = countries,
                         regions = regions,
-                        cities = cities
+                        cities = cities,
+                        isLoading = isLoading,
+                        maxPriceFilter = maxPriceFilter,
+                        onPriceFilterChange = { viewModel.setMaxPriceFilter(it) }
                     )
                 }
                 1 -> SearchScreen(onServiceClick = onServiceClick)
                 2 -> NotificationsScreen()
                 3 -> ProfileScreen(
                     onSettingsClick = onSettingsClick,
+                    onSolicitudesClick = onSolicitudesClick,
+                    onMisTrabajosClick = onMisTrabajosClick,
                     onServiceClick = { post ->
                         onServiceClick(
                             Screen.DetalleServicio(
@@ -194,7 +205,10 @@ fun HomeContent(
     services: List<ServicePost>,
     countries: List<String>,
     regions: List<String>,
-    cities: List<String>
+    cities: List<String>,
+    isLoading: Boolean,
+    maxPriceFilter: Float?,
+    onPriceFilterChange: (Float?) -> Unit
 ) {
     var selectedCountry by remember { mutableStateOf("País") }
     var countryExpanded by remember { mutableStateOf(false) }
@@ -204,6 +218,26 @@ fun HomeContent(
 
     var selectedCity by remember { mutableStateOf("Ciudad") }
     var cityExpanded by remember { mutableStateOf(false) }
+
+    var showPriceFilter by remember { mutableStateOf(false) }
+
+    val sheetState = rememberModalBottomSheetState()
+
+    if (showPriceFilter) {
+        ModalBottomSheet(
+            onDismissRequest = { showPriceFilter = false },
+            sheetState = sheetState,
+            containerColor = Color.White
+        ) {
+            PriceFilterContent(
+                currentMaxPrice = maxPriceFilter,
+                onPriceSelected = { 
+                    onPriceFilterChange(it)
+                    showPriceFilter = false
+                }
+            )
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -390,59 +424,91 @@ fun HomeContent(
                             }
                         }
                     }
+
+                    IconButton(
+                        onClick = { showPriceFilter = true },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(
+                                if (maxPriceFilter != null) Color(0xFFE8EFFF) else Color(0xFFF5F5F5),
+                                RoundedCornerShape(8.dp)
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filtro de Precio",
+                            tint = if (maxPriceFilter != null) Color(0xFF0047FF) else Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Listado de Tarjetas Reales con Filtrado Compuesto
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                val filteredServices = services.filter { post ->
-                    val matchesCategory = if (selectedCategory == "Todo") true 
-                                         else post.category.name.equals(selectedCategory, ignoreCase = true)
-                    
-                    val matchesCountry = if (selectedCountry == "País") true
-                                         else post.country.equals(selectedCountry, ignoreCase = true)
+            if (isLoading) {
+                DashboardShimmer()
+            } else {
+                // Listado de Tarjetas Reales con Filtrado Compuesto
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    val filteredServices = services.filter { post ->
+                        val matchesCategory = if (selectedCategory == "Todo") true 
+                                             else post.category.name.equals(selectedCategory, ignoreCase = true)
+                        
+                        val matchesCountry = if (selectedCountry == "País") true
+                                             else post.country.equals(selectedCountry, ignoreCase = true)
 
-                    val matchesRegion = if (selectedRegion == "Región") true
-                                        else post.region.equals(selectedRegion, ignoreCase = true)
-                    
-                    val matchesCity = if (selectedCity == "Ciudad") true 
-                                      else post.city.equals(selectedCity, ignoreCase = true)
-                    
-                    matchesCategory && matchesCountry && matchesRegion && matchesCity
-                }
+                        val matchesRegion = if (selectedRegion == "Región") true
+                                            else post.region.equals(selectedRegion, ignoreCase = true)
+                        
+                        val matchesCity = if (selectedCity == "Ciudad") true 
+                                          else post.city.equals(selectedCity, ignoreCase = true)
 
-                items(filteredServices) { post ->
-                    ServicePostCard(
-                        post = post,
-                        authorName = "Proveedor",
-                        authorRole = "Verificado",
-                        onClick = {
-                            onServiceClick(
-                                Screen.DetalleServicio(
-                                    id = post.id,
-                                    title = post.title,
-                                    description = post.description,
-                                    category = post.category.name,
-                                    location = post.addressText,
-                                    priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
-                                    providerId = post.authorId,
-                                    providerName = "Proveedor",
-                                    providerSpecialty = "Especialista",
-                                    providerImageRes = R.drawable.isotipo,
-                                    rating = 4.5f,
-                                    reviewsCount = 10,
-                                    imageRes = R.drawable.card_service,
-                                    imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
-                                )
+                        val matchesPrice = if (maxPriceFilter == null) true
+                                          else post.minPrice <= maxPriceFilter
+                        
+                        matchesCategory && matchesCountry && matchesRegion && matchesCity && matchesPrice
+                    }
+
+                    if (filteredServices.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("No hay servicios disponibles con estos filtros", color = Color.Gray)
+                            }
+                        }
+                    } else {
+                        items(filteredServices) { post ->
+                            ServicePostCard(
+                                post = post,
+                                authorName = "Proveedor",
+                                authorRole = "Verificado",
+                                onClick = {
+                                    onServiceClick(
+                                        Screen.DetalleServicio(
+                                            id = post.id,
+                                            title = post.title,
+                                            description = post.description,
+                                            category = post.category.name,
+                                            location = post.addressText,
+                                            priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
+                                            providerId = post.authorId,
+                                            providerName = "Proveedor",
+                                            providerSpecialty = "Especialista",
+                                            providerImageRes = R.drawable.isotipo,
+                                            rating = 4.5f,
+                                            reviewsCount = 10,
+                                            imageRes = R.drawable.card_service,
+                                            imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
+                                        )
+                                    )
+                                }
                             )
                         }
-                    )
+                    }
                 }
             }
         }
@@ -459,6 +525,86 @@ fun HomeContent(
         ) {
             Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_create), modifier = Modifier.size(32.dp))
         }
+    }
+}
+
+@Composable
+fun PriceFilterContent(
+    currentMaxPrice: Float?,
+    onPriceSelected: (Float?) -> Unit
+) {
+    var sliderPosition by remember { mutableFloatStateOf(currentMaxPrice ?: 1000000f) }
+    val format = NumberFormat.getCurrencyInstance(Locale("es", "CO")).apply {
+        maximumFractionDigits = 0
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Filtrar por presupuesto",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Mostrar servicios desde el precio mínimo hasta:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = format.format(sliderPosition),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color(0xFF0047FF),
+            fontWeight = FontWeight.ExtraBold
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Slider(
+            value = sliderPosition,
+            onValueChange = { sliderPosition = it },
+            valueRange = 10000f..2000000f,
+            steps = 19,
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFF0047FF),
+                activeTrackColor = Color(0xFF0047FF),
+                inactiveTrackColor = Color(0xFFE8EFFF)
+            )
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = "$ 10k", fontSize = 12.sp, color = Color.Gray)
+            Text(text = "$ 2M+", fontSize = 12.sp, color = Color.Gray)
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = { onPriceSelected(sliderPosition) },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF))
+        ) {
+            Text("Aplicar Filtro", fontWeight = FontWeight.Bold)
+        }
+        
+        TextButton(
+            onClick = { onPriceSelected(null) },
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
+            Text("Limpiar Filtro", color = Color.Gray)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 

@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
 import com.example.ruvo_app.domain.model.ChatMessage
@@ -63,14 +64,29 @@ fun ChatScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = chatData.providerImageRes),
-                            contentDescription = null,
+                        Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                                .clip(CircleShape)
+                                .background(Color.LightGray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (chatData.providerImageUrl != null) {
+                                AsyncImage(
+                                    model = chatData.providerImageUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = chatData.providerImageRes),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -39,7 +39,8 @@ enum class PostStatus {
     PENDIENTE,
     VERIFICADO,
     RECHAZADO,
-    RESUELTO_FINALIZADO
+    RESUELTO_FINALIZADO,
+    ARCHIVADO
 }
 
 @Serializable

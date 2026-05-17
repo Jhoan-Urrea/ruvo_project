@@ -18,6 +18,9 @@ import androidx.compose.material.icons.outlined.CardMembership
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,226 +29,282 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
+import com.example.ruvo_app.domain.model.ServicePost
+import com.example.ruvo_app.domain.model.User
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProviderProfileScreen(
     profileData: Screen.PerfilProveedor,
     onBackClick: () -> Unit,
-    onContactClick: () -> Unit
+    onContactClick: (User) -> Unit,
+    viewModel: ProviderProfileViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(profileData.providerId) {
+        viewModel.loadProviderProfile(profileData.providerId)
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Perfil del proveedor",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(end = 48.dp)
-                        )
-                    }
+                    Text(
+                        text = "Perfil del proveedor",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
             )
         },
         bottomBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp,
-                color = Color.White
-            ) {
-                Button(
-                    onClick = onContactClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))
+            val user = (uiState as? ProviderProfileUiState.Success)?.user
+            if (user != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shadowElevation = 8.dp,
+                    color = Color.White
                 ) {
-                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Contactar proveedor", fontWeight = FontWeight.Bold)
+                    Button(
+                        onClick = { onContactClick(user) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))
+                    ) {
+                        Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Contactar proveedor", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .background(Color(0xFFF8F9FA))
-        ) {
-            // Header Azul
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
-                    .background(Color(0xFF1A73E8)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(
-                        painter = painterResource(id = profileData.imageRes),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .border(3.dp, Color.White, CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            when (val state = uiState) {
+                is ProviderProfileUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is ProviderProfileUiState.Error -> {
                     Text(
-                        text = profileData.name,
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
+                        text = state.message,
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.error
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(
-                        color = Color.White.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = profileData.specialty,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.LocationOn, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = profileData.location, color = Color.White, fontSize = 14.sp)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${profileData.rating}",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "(${profileData.reviewsCount} reseñas)",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 14.sp
-                        )
-                    }
                 }
-            }
-
-            // Estadísticas
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .offset(y = (-30).dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        ProviderStatItem(value = "2", label = "Servicios activos", color = Color(0xFF1A73E8))
-                        ProviderStatItem(value = "0", label = "Completados", color = Color(0xFF2ECC71))
-                        ProviderStatItem(value = "850", label = "Puntos", color = Color(0xFFFF9800))
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = Color(0xFFF1F3F4))
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Progreso de nivel", fontSize = 14.sp, color = Color.Gray)
-                        Text(profileData.specialty, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { 0.7f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape),
-                        color = Color.Black,
-                        trackColor = Color(0xFFE0E0E0)
+                is ProviderProfileUiState.Success -> {
+                    ProviderProfileContent(
+                        user = state.user,
+                        services = state.services,
+                        initialImageRes = profileData.imageRes
                     )
                 }
             }
+        }
+    }
+}
 
-            // Acerca de
-            InfoSection(
-                title = "ACERCA DE",
-                items = listOf(
-                    InfoItemData(Icons.Outlined.CalendarMonth, "Miembro desde", "enero de 2025"),
-                    InfoItemData(Icons.Outlined.CardMembership, "Insignias obtenidas", "0 de 0")
+@Composable
+fun ProviderProfileContent(
+    user: User,
+    services: List<ServicePost>,
+    initialImageRes: Int
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .background(Color(0xFFF8F9FA))
+    ) {
+        // Header Azul
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .background(Color(0xFF1A73E8)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .border(3.dp, Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (user.profilePictureUrl != null) {
+                        AsyncImage(
+                            model = user.profilePictureUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = initialImageRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(60.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = user.fullName,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 )
-            )
+                Spacer(modifier = Modifier.height(4.dp))
+                Surface(
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = user.role.name,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.LocationOn, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = user.location?.address ?: "Ubicación no definida", color = Color.White, fontSize = 14.sp)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = String.format(Locale.getDefault(), "%.1f", user.reputation.rating),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "(${user.stats.totalReviews} reseñas)",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
 
-            // Servicios Ofrecidos
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-            ) {
+        // Estadísticas
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .offset(y = (-30).dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    ProviderStatItem(value = "${user.stats.activePosts}", label = "Servicios activos", color = Color(0xFF1A73E8))
+                    ProviderStatItem(value = "${user.stats.finishedPosts}", label = "Completados", color = Color(0xFF2ECC71))
+                    ProviderStatItem(value = "${user.reputation.points}", label = "Puntos", color = Color(0xFFFF9800))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFFF1F3F4))
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "SERVICIOS OFRECIDOS",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Gray
-                        )
-                    )
-                    Surface(
-                        color = Color(0xFFF1F3F4),
-                        shape = CircleShape
-                    ) {
-                        Text(
-                            "2",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text("Nivel", fontSize = 14.sp, color = Color.Gray)
+                    Text(user.reputation.level.name, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Mock Service Item
-                ProviderServiceItem()
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { user.reputation.getProgressToNextLevel() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(CircleShape),
+                    color = Color(0xFF1A73E8),
+                    trackColor = Color(0xFFE0E0E0)
+                )
             }
-            
-            Spacer(modifier = Modifier.height(100.dp))
         }
+
+        // Acerca de
+        InfoSection(
+            title = "ACERCA DE",
+            items = listOf(
+                InfoItemData(Icons.Outlined.CalendarMonth, "Miembro desde", "enero de 2025"),
+                InfoItemData(Icons.Outlined.CardMembership, "Insignias obtenidas", "${user.reputation.badges.size}")
+            )
+        )
+
+        // Servicios Ofrecidos
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "SERVICIOS OFRECIDOS",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                )
+                Surface(
+                    color = Color(0xFFF1F3F4),
+                    shape = CircleShape
+                ) {
+                    Text(
+                        "${services.size}",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            services.forEach { post ->
+                ProviderServiceItem(post)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(100.dp))
     }
 }
 
@@ -299,7 +358,7 @@ fun InfoSection(title: String, items: List<InfoItemData>) {
 }
 
 @Composable
-fun ProviderServiceItem() {
+fun ProviderServiceItem(post: ServicePost) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -307,30 +366,44 @@ fun ProviderServiceItem() {
         border = BorderStroke(1.dp, Color(0xFFF1F3F4))
     ) {
         Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_ruvo), // Placeholder
-                contentDescription = null,
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
+            val imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.LightGray),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Star, null, tint = Color.White)
+                }
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Plomero profesional - Reparació...",
+                    post.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Text("Servicio de plomería urgente 24...", fontSize = 12.sp, color = Color.Gray, maxLines = 1)
+                Text(post.description, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Surface(
                 color = Color(0xFFE8EFFF),
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    "Hogar",
+                    post.category.name,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     fontSize = 10.sp,
                     color = Color(0xFF1A73E8),
@@ -338,25 +411,5 @@ fun ProviderServiceItem() {
                 )
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ProviderProfileScreenPreview() {
-    Ruvo_appTheme {
-        ProviderProfileScreen(
-            profileData = Screen.PerfilProveedor(
-                providerId = "1",
-                name = "Carlos Rodríguez",
-                specialty = "Experto",
-                rating = 4.7f,
-                reviewsCount = 23,
-                location = "Bogotá, Colombia",
-                imageRes = R.drawable.isotipo
-            ),
-            onBackClick = {},
-            onContactClick = {}
-        )
     }
 }

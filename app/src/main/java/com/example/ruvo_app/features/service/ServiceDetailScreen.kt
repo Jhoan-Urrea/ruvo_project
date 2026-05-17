@@ -2,6 +2,8 @@ package com.example.ruvo_app.features.service
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.ruvo_app.BuildConfig
 import com.example.ruvo_app.R
+import com.example.ruvo_app.domain.model.Comment
 import com.example.ruvo_app.domain.model.PostStatus
 import com.example.ruvo_app.domain.model.ServicePost
 import org.maplibre.android.MapLibre
@@ -36,6 +39,9 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -47,6 +53,7 @@ fun ServiceDetailScreen(
     viewModel: ServiceDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val comments by viewModel.comments.collectAsState()
     val scrollState = rememberScrollState()
     var commentText by remember { mutableStateOf("") }
 
@@ -64,7 +71,7 @@ fun ServiceDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Compartir */ }) {
+                    IconButton(onClick = { /* TODO: Compartir - Postponed as per user request */ }) {
                         Icon(Icons.Default.Share, contentDescription = "Compartir")
                     }
                 },
@@ -80,6 +87,8 @@ fun ServiceDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -98,7 +107,12 @@ fun ServiceDetailScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     IconButton(
-                        onClick = { /* TODO: Enviar */ },
+                        onClick = { 
+                            if (commentText.isNotBlank()) {
+                                viewModel.addComment(postId, commentText)
+                                commentText = ""
+                            }
+                        },
                         modifier = Modifier
                             .size(48.dp)
                             .background(MaterialTheme.colorScheme.primary, CircleShape)
@@ -280,11 +294,29 @@ fun ServiceDetailScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.logo_ruvo),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.LightGray)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.LightGray)
+                                        .border(1.dp, Color.LightGray, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (author.profilePictureUrl != null) {
+                                        AsyncImage(
+                                            model = author.profilePictureUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.logo_ruvo),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(author.fullName, fontWeight = FontWeight.Bold)
@@ -335,12 +367,49 @@ fun ServiceDetailScreen(
                             Spacer(modifier = Modifier.height(32.dp))
                             HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("Comentarios (2)", fontWeight = FontWeight.Bold)
+                            Text("Comentarios (${comments.size})", fontWeight = FontWeight.Bold)
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            // Real Comments List
+                            comments.forEach { comment ->
+                                CommentItem(comment)
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                            
+                            if (comments.isEmpty()) {
+                                Text("Aún no hay comentarios. ¡Sé el primero!", color = Color.Gray, fontSize = 14.sp)
+                            }
+                            
                             Spacer(modifier = Modifier.height(80.dp))
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun CommentItem(comment: Comment) {
+    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    val dateStr = sdf.format(Date(comment.timestamp))
+
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color.LightGray),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(16.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = "Usuario", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(text = comment.text, fontSize = 14.sp, color = Color.DarkGray)
+            Text(text = dateStr, fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }

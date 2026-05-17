@@ -42,7 +42,8 @@ class ChatListViewModel @Inject constructor(
                         lastMessage = conv.lastMessage,
                         time = formatTimestamp(conv.lastTimestamp),
                         unreadCount = unread,
-                        imageRes = com.example.ruvo_app.R.drawable.isotipo // Placeholder
+                        imageRes = com.example.ruvo_app.R.drawable.isotipo, // Default icon
+                        imageUrl = conv.otherUserImage.ifEmpty { null } // Real profile picture from Cloudinary
                     )
                 }
                 _chats.value = previews

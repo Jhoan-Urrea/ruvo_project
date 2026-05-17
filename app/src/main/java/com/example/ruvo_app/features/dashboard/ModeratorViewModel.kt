@@ -35,7 +35,6 @@ class ModeratorViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
-            // Combinamos los flujos de posts y usuarios para calcular estadísticas reales en tiempo real
             combine(
                 serviceRepository.getAllServicePosts(),
                 userRepository.getAllUsers()
@@ -60,7 +59,6 @@ class ModeratorViewModel @Inject constructor(
         viewModelScope.launch {
             val result = serviceRepository.updatePostStatus(postId, PostStatus.VERIFICADO)
             if (result.isSuccess) {
-                // Notificar al autor sobre la aprobación
                 notificationRepository.sendNotification(
                     Notification(
                         receiverId = post.authorId,
@@ -72,17 +70,16 @@ class ModeratorViewModel @Inject constructor(
         }
     }
 
-    fun rejectPost(postId: String) {
+    fun rejectPost(postId: String, reason: String) {
         val post = _allPosts.value.find { it.id == postId } ?: return
         viewModelScope.launch {
-            val result = serviceRepository.updatePostStatus(postId, PostStatus.RECHAZADO)
+            val result = serviceRepository.rejectPost(postId, reason)
             if (result.isSuccess) {
-                // Notificar al autor sobre el rechazo
                 notificationRepository.sendNotification(
                     Notification(
                         receiverId = post.authorId,
                         type = NotificationType.ESTADO_ACTUALIZADO,
-                        message = "Tu servicio '${post.title}' ha sido rechazado tras la revisión."
+                        message = "Tu servicio '${post.title}' ha sido rechazado. Motivo: $reason"
                     )
                 )
             }

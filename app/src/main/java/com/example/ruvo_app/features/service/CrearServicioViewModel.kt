@@ -3,14 +3,17 @@ package com.example.ruvo_app.features.service
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ruvo_app.R
+import com.example.ruvo_app.core.utils.UiText
 import com.example.ruvo_app.domain.model.*
 import com.example.ruvo_app.domain.repository.ImageStorageService
 import com.example.ruvo_app.domain.repository.NotificationRepository
 import com.example.ruvo_app.domain.repository.ServiceRepository
+import com.example.ruvo_app.domain.service.Achievement
+import com.example.ruvo_app.domain.service.GamificationService
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -20,7 +23,8 @@ import javax.inject.Inject
 class CrearServicioViewModel @Inject constructor(
     private val storageService: ImageStorageService,
     private val serviceRepository: ServiceRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val gamificationService: GamificationService
 ) : ViewModel() {
 
     private val _isUploading = MutableStateFlow(false)
@@ -32,20 +36,20 @@ class CrearServicioViewModel @Inject constructor(
     private val _uploadedImages = MutableStateFlow<List<ImageResource>>(emptyList())
     val uploadedImages = _uploadedImages.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
+    private val _error = MutableStateFlow<UiText?>(null)
     val error = _error.asStateFlow()
 
-    private val _successMessage = MutableStateFlow<String?>(null)
+    private val _successMessage = MutableStateFlow<UiText?>(null)
     val successMessage = _successMessage.asStateFlow()
 
     // Reactive validation states
-    private val _titleError = MutableStateFlow<String?>(null)
+    private val _titleError = MutableStateFlow<UiText?>(null)
     val titleError = _titleError.asStateFlow()
 
-    private val _priceError = MutableStateFlow<String?>(null)
+    private val _priceError = MutableStateFlow<UiText?>(null)
     val priceError = _priceError.asStateFlow()
 
-    private val _descriptionError = MutableStateFlow<String?>(null)
+    private val _descriptionError = MutableStateFlow<UiText?>(null)
     val descriptionError = _descriptionError.asStateFlow()
 
     // Location structured data
@@ -58,16 +62,16 @@ class CrearServicioViewModel @Inject constructor(
 
     fun onTitleChanged(title: String) {
         _titleError.value = when {
-            title.isBlank() -> "El título es obligatorio"
-            title.length < 5 -> "El título debe tener al menos 5 caracteres"
+            title.isBlank() -> UiText.StringResource(R.string.error_required_fields)
+            title.length < 5 -> UiText.DynamicString("El título debe tener al menos 5 caracteres")
             else -> null
         }
     }
 
     fun onDescriptionChanged(desc: String) {
         _descriptionError.value = when {
-            desc.isBlank() -> "La descripción es obligatoria"
-            desc.length < 20 -> "Por favor describe mejor tu servicio (mín. 20 caracteres)"
+            desc.isBlank() -> UiText.StringResource(R.string.error_required_fields)
+            desc.length < 20 -> UiText.DynamicString("Por favor describe mejor tu servicio (mín. 20 caracteres)")
             else -> null
         }
     }
@@ -77,8 +81,8 @@ class CrearServicioViewModel @Inject constructor(
         val maxVal = max.toDoubleOrNull() ?: 0.0
         
         _priceError.value = when {
-            minVal <= 0 || maxVal <= 0 -> "Ingresa precios válidos"
-            minVal >= maxVal -> "El precio mínimo debe ser menor al máximo"
+            minVal <= 0 || maxVal <= 0 -> UiText.DynamicString("Ingresa precios válidos")
+            minVal >= maxVal -> UiText.DynamicString("El precio mínimo debe ser menor al máximo")
             else -> null
         }
     }
@@ -94,7 +98,7 @@ class CrearServicioViewModel @Inject constructor(
 
     fun uploadImage(uri: Uri) {
         if (_uploadedImages.value.size >= 3) {
-            _error.value = "Solo puedes subir hasta 3 imágenes"
+            _error.value = UiText.DynamicString("Solo puedes subir hasta 3 imágenes")
             return
         }
 
@@ -105,7 +109,7 @@ class CrearServicioViewModel @Inject constructor(
                 val isFirst = _uploadedImages.value.isEmpty()
                 _uploadedImages.update { it + resource.copy(isPrimary = isFirst) }
             }.onFailure { e ->
-                _error.value = "Fallo al cargar imagen: ${e.message}"
+                _error.value = UiText.StringResource(R.string.error_upload_failed)
             }
             _isUploading.value = false
         }
@@ -140,12 +144,12 @@ class CrearServicioViewModel @Inject constructor(
         
         // Final Validation check
         if (_titleError.value != null || _priceError.value != null || _descriptionError.value != null) {
-            _error.value = "Por favor corrige los errores en el formulario"
+            _error.value = UiText.DynamicString("Por favor corrige los errores en el formulario")
             return
         }
 
         if (_uploadedImages.value.isEmpty()) {
-            _error.value = "Debes subir al menos una imagen"
+            _error.value = UiText.DynamicString("Debes subir al menos una imagen")
             return
         }
 
@@ -171,6 +175,8 @@ class CrearServicioViewModel @Inject constructor(
 
             val result = serviceRepository.saveServicePost(newPost)
             result.onSuccess {
+                gamificationService.checkAndAwardAchievement(currentUserId, Achievement.Emprendedor)
+
                 notificationRepository.sendNotification(
                     Notification(
                         receiverId = currentUserId,
@@ -178,10 +184,10 @@ class CrearServicioViewModel @Inject constructor(
                         message = "Tu servicio '$titulo' ha sido enviado para revisión."
                     )
                 )
-                _successMessage.value = "¡Servicio creado exitosamente! Un moderador lo revisará pronto."
+                _successMessage.value = UiText.DynamicString("¡Servicio creado exitosamente! Un moderador lo revisará pronto.")
                 onSuccess()
             }.onFailure { e ->
-                _error.value = "Error al guardar: ${e.message}"
+                _error.value = UiText.StringResource(R.string.error_save_failed)
             }
             _isSaving.value = false
         }

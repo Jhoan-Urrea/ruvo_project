@@ -10,6 +10,9 @@ interface ServiceRepository {
     fun getServicePostsByAuthor(authorId: String): Flow<List<ServicePost>>
     fun getAllServicePosts(): Flow<List<ServicePost>>
     suspend fun updatePostStatus(postId: String, newStatus: PostStatus): Result<Unit>
+    suspend fun archiveService(postId: String): Result<Unit>
+    suspend fun reactivateService(postId: String): Result<Unit>
+    suspend fun rejectPost(postId: String, reason: String): Result<Unit>
     suspend fun toggleLike(postId: String, userId: String): Result<Unit>
     
     // Filtros geográficos dinámicos

@@ -3,7 +3,10 @@ package com.example.ruvo_app.features.register
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ruvo_app.domain.model.User
+import com.example.ruvo_app.domain.service.Achievement
+import com.example.ruvo_app.domain.service.GamificationService
 import com.example.ruvo_app.domain.usecase.RegisterUseCase
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +18,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
-    private val registerUseCase: RegisterUseCase
+    private val registerUseCase: RegisterUseCase,
+    private val gamificationService: GamificationService,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -68,6 +73,11 @@ class RegisterViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
             
             result.onSuccess {
+                // Award Welcome Achievement
+                val currentUserId = auth.currentUser?.uid
+                if (currentUserId != null) {
+                    gamificationService.checkAndAwardAchievement(currentUserId, Achievement.Bienvenido)
+                }
                 onSuccess()
             }.onFailure { e ->
                 _uiState.update { it.copy(error = e.message ?: "Error al registrar usuario") }

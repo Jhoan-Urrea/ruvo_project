@@ -96,6 +96,31 @@ class ServiceRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun archiveService(postId: String): Result<Unit> {
+        return updatePostStatus(postId, PostStatus.ARCHIVADO)
+    }
+
+    override suspend fun reactivateService(postId: String): Result<Unit> {
+        // Al reactivar, vuelve a PENDIENTE para revisión de seguridad/calidad
+        return updatePostStatus(postId, PostStatus.PENDIENTE)
+    }
+
+    override suspend fun rejectPost(postId: String, reason: String): Result<Unit> {
+        return try {
+            firestore.collection("services_posts").document(postId)
+                .update(
+                    mapOf(
+                        "status" to PostStatus.RECHAZADO.name,
+                        "rejectionReason" to reason
+                    )
+                )
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun toggleLike(postId: String, userId: String): Result<Unit> {
         return try {
             val docRef = firestore.collection("services_posts").document(postId)

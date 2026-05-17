@@ -18,14 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.core.component.AdminPostCard
 import com.example.ruvo_app.core.component.AdminUserCard
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
 import com.example.ruvo_app.domain.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,7 +98,7 @@ fun ModeratorDashboard(
                     onFilterChange = { selectedFilter = it },
                     posts = allPosts,
                     onApprove = { viewModel.approvePost(it) },
-                    onReject = { viewModel.rejectPost(it) }
+                    onReject = { postId, reason -> viewModel.rejectPost(postId, reason) }
                 )
             }
         }
@@ -201,8 +198,43 @@ fun PostsManagement(
     onFilterChange: (String) -> Unit,
     posts: List<ServicePost>,
     onApprove: (String) -> Unit,
-    onReject: (String) -> Unit
+    onReject: (String, String) -> Unit
 ) {
+    var postToReject by remember { mutableStateOf<String?>(null) }
+    var rejectionReason by remember { mutableStateOf("") }
+
+    if (postToReject != null) {
+        AlertDialog(
+            onDismissRequest = { postToReject = null },
+            title = { Text("Motivo de Rechazo") },
+            text = {
+                Column {
+                    Text("Por favor, explica brevemente por qué se rechaza esta publicación:")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = rejectionReason,
+                        onValueChange = { rejectionReason = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Ej: Imágenes inapropiadas o descripción incompleta") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onReject(postToReject!!, rejectionReason)
+                        postToReject = null
+                        rejectionReason = ""
+                    },
+                    enabled = rejectionReason.isNotBlank()
+                ) { Text("Confirmar Rechazo") }
+            },
+            dismissButton = {
+                TextButton(onClick = { postToReject = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
     Column {
         Text(text = "Moderación", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold))
         AdminSearchBar(query, onQueryChange, "Buscar publicaciones...")
@@ -225,7 +257,7 @@ fun PostsManagement(
                     authorName = "Proveedor", 
                     date = "Reciente",
                     onApprove = { onApprove(post.id) },
-                    onReject = { onReject(post.id) }
+                    onReject = { postToReject = post.id }
                 ) 
             }
         }

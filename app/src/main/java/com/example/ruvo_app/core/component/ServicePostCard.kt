@@ -9,10 +9,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.ModeComment
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,7 +27,6 @@ import coil.compose.AsyncImage
 import com.example.ruvo_app.R
 import com.example.ruvo_app.domain.model.PostStatus
 import com.example.ruvo_app.domain.model.ServicePost
-import java.util.Locale
 
 @Composable
 fun ServicePostCard(
@@ -35,16 +34,22 @@ fun ServicePostCard(
     authorName: String,
     authorRole: String,
     modifier: Modifier = Modifier,
+    showOptions: Boolean = false,
+    onArchive: () -> Unit = {},
+    onReactivate: () -> Unit = {},
     onClick: () -> Unit = {}
 ) {
     // Lógica para etiqueta "Reciente" (menos de 48 horas)
     val isRecent = System.currentTimeMillis() - post.createdAt < 48 * 60 * 60 * 1000
+    var expanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = if (post.status == PostStatus.ARCHIVADO) Color(0xFFF5F5F5) else Color.White
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = onClick
     ) {
@@ -63,6 +68,7 @@ fun ServicePostCard(
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
+                        alpha = if (post.status == PostStatus.ARCHIVADO) 0.6f else 1f,
                         error = painterResource(id = R.drawable.card_service)
                     )
                 } else {
@@ -70,7 +76,8 @@ fun ServicePostCard(
                         painter = painterResource(id = R.drawable.card_service),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        alpha = if (post.status == PostStatus.ARCHIVADO) 0.6f else 1f
                     )
                 }
 
@@ -98,7 +105,7 @@ fun ServicePostCard(
 
                     // Destacado o Reciente
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (post.isFeatured) {
+                        if (post.isFeatured && post.status != PostStatus.ARCHIVADO) {
                             Surface(
                                 color = Color(0xFF0047FF),
                                 shape = RoundedCornerShape(16.dp)
@@ -112,7 +119,7 @@ fun ServicePostCard(
                                     Text("Destacado", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
-                        } else if (isRecent) {
+                        } else if (isRecent && post.status != PostStatus.ARCHIVADO) {
                             Surface(
                                 color = Color(0xFFFF5722),
                                 shape = RoundedCornerShape(16.dp)
@@ -139,6 +146,7 @@ fun ServicePostCard(
                         PostStatus.PENDIENTE -> Color(0xFFFFB300)
                         PostStatus.VERIFICADO -> Color(0xFF2ECC71)
                         PostStatus.RECHAZADO -> Color(0xFFE74C3C)
+                        PostStatus.ARCHIVADO -> Color.Gray
                         else -> Color.Gray
                     }.copy(alpha = 0.9f),
                     shape = RoundedCornerShape(8.dp)
@@ -148,6 +156,7 @@ fun ServicePostCard(
                             PostStatus.PENDIENTE -> "En revisión"
                             PostStatus.VERIFICADO -> "Publicado"
                             PostStatus.RECHAZADO -> "Rechazado"
+                            PostStatus.ARCHIVADO -> "Archivado"
                             else -> ""
                         },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -155,6 +164,46 @@ fun ServicePostCard(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
+                }
+
+                // Options Button
+                if (showOptions) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = { expanded = true },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones")
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            if (post.status != PostStatus.ARCHIVADO) {
+                                DropdownMenuItem(
+                                    text = { Text("Archivar") },
+                                    onClick = {
+                                        onArchive()
+                                        expanded = false
+                                    }
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text("Reactivar") },
+                                    onClick = {
+                                        onReactivate()
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -171,7 +220,8 @@ fun ServicePostCard(
                         text = post.title,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                            fontSize = 18.sp,
+                            color = if (post.status == PostStatus.ARCHIVADO) Color.Gray else Color.Black
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -232,7 +282,7 @@ fun ServicePostCard(
                     Text(
                         text = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF0047FF),
+                            color = if (post.status == PostStatus.ARCHIVADO) Color.Gray else Color(0xFF0047FF),
                             fontWeight = FontWeight.Bold
                         )
                     )

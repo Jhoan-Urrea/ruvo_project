@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ruvo_app.domain.model.ChatMessage
 import com.example.ruvo_app.domain.repository.ChatRepository
+import com.example.ruvo_app.domain.service.Achievement
+import com.example.ruvo_app.domain.service.GamificationService
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val gamificationService: GamificationService
 ) : ViewModel() {
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -47,7 +50,11 @@ class ChatViewModel @Inject constructor(
         )
         
         viewModelScope.launch {
-            chatRepository.sendMessage(message)
+            val result = chatRepository.sendMessage(message)
+            if (result.isSuccess) {
+                // GAMIFICACIÓN: Logro por primer contacto
+                gamificationService.checkAndAwardAchievement(currentUserId, Achievement.PrimerContacto)
+            }
         }
     }
 

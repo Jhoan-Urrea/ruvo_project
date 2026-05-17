@@ -1,46 +1,65 @@
 package com.example.ruvo_app.core.component
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocationDropdown(text: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.height(36.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = Color(0xFFF5F5F5),
-        border = BorderStroke(0.5.dp, Color.LightGray)
+fun LocationDropdown(
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = ""
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        OutlinedTextField(
+            value = if (selectedOption == placeholder) "" else selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            placeholder = { Text(placeholder, fontSize = 10.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                focusedContainerColor = Color(0xFFF5F5F5)
+            ),
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+                .heightIn(max = 48.dp),
+            shape = RoundedCornerShape(8.dp),
+            textStyle = TextStyle(fontSize = 11.sp),
+            singleLine = true
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
         ) {
-            Text(
-                text = text, 
-                fontSize = 11.sp, 
-                color = Color.Gray, 
-                maxLines = 1, 
-                overflow = TextOverflow.Ellipsis
-            )
-            Icon(
-                Icons.Default.KeyboardArrowDown, 
-                contentDescription = null, 
-                tint = Color.Gray, 
-                modifier = Modifier.size(16.dp)
-            )
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option, fontSize = 12.sp) },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

@@ -61,6 +61,15 @@
     <string name="nav_search">Buscar</string>
     <string name="nav_notifications">Notificaciones</string>
     <string name="nav_profile">Perfil</string>
+
+    <!-- Common UI -->
     <string name="loading">Cargando...</string>
     <string name="retry">Reintentar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save">Guardar</string>
+    <string name="error_network">Error de conexión. Revisa tu internet.</string>
+    <string name="error_unknown">Algo salió mal. Inténtalo más tarde.</string>
+    <string name="error_upload_failed">No pudimos subir la imagen.</string>
+    <string name="error_save_failed">Error al guardar los datos.</string>
+    <string name="error_service_not_found">El servicio no existe o fue eliminado.</string>
 </resources>

@@ -22,13 +22,15 @@ sealed interface Screen {
         val rating: Float,
         val reviewsCount: Int,
         val location: String,
-        val imageRes: Int
+        val imageRes: Int,
+        val profilePictureUrl: String? = null
     ) : Screen
     @Serializable data class Chat(
         val providerId: String,
         val providerName: String,
         val providerSpecialty: String,
         val providerImageRes: Int,
+        val providerImageUrl: String? = null,
         val serviceTitle: String? = null,
         val serviceDescription: String? = null
     ) : Screen
@@ -64,4 +66,6 @@ sealed interface Screen {
         val providerImageRes: Int,
         val location: String
     ) : Screen
+    @Serializable object MisSolicitudes : Screen
+    @Serializable object MisTrabajos : Screen
 }

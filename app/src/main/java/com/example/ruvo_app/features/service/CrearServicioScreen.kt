@@ -35,13 +35,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
 import com.example.ruvo_app.domain.model.ServiceCategory
 import com.google.android.gms.location.LocationServices
 import java.util.Locale
@@ -78,12 +76,23 @@ fun CrearServicioScreen(
     val titleError by viewModel.titleError.collectAsState()
     val priceError by viewModel.priceError.collectAsState()
     val descriptionError by viewModel.descriptionError.collectAsState()
-    
+
     val context = LocalContext.current
+
+    // Lógica para deshabilitar botón si el formulario es inválido o está procesando
+    val isFormValid = titulo.isNotBlank() && 
+                     descripcion.isNotBlank() && 
+                     precioMin.isNotBlank() && 
+                     precioMax.isNotBlank() && 
+                     ubicacion.isNotBlank() && 
+                     uploadedImages.isNotEmpty() &&
+                     titleError == null && 
+                     priceError == null && 
+                     descriptionError == null
+
     val scrollState = rememberScrollState()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-    // Sincronizar selección de ubicación desde el mapa
     LaunchedEffect(initialLat, initialLng, initialAddress, initialCountry, initialRegion, initialCity, initialExact) {
         if (initialLat != null && initialLng != null && initialAddress != null) {
             viewModel.setLocationData(
@@ -100,14 +109,14 @@ fun CrearServicioScreen(
 
     LaunchedEffect(error) {
         error?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show()
             viewModel.clearError()
         }
     }
 
     LaunchedEffect(successMessage) {
         successMessage?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show()
             viewModel.clearSuccessMessage()
             onBackClick()
         }
@@ -204,11 +213,6 @@ fun CrearServicioScreen(
                     val max = precioMax.toDoubleOrNull() ?: 0.0
                     val rad = radio.toDoubleOrNull() ?: 5.0
                     
-                    if (titulo.isBlank() || ubicacion.isBlank()) {
-                        Toast.makeText(context, "Por favor completa los campos obligatorios", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-
                     viewModel.saveServicePost(
                         titulo, categoriaSeleccionada.name, descripcion, min, max, ubicacion, rad,
                         onSuccess = { }
@@ -220,7 +224,7 @@ fun CrearServicioScreen(
                     .height(56.dp),
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF)),
-                enabled = !isSaving && !isUploading
+                enabled = isFormValid && !isSaving && !isUploading
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
@@ -248,7 +252,7 @@ fun CrearServicioScreen(
                 placeholder = { Text("Ej. Plomero profesional") },
                 shape = RoundedCornerShape(12.dp),
                 isError = titleError != null,
-                supportingText = { titleError?.let { Text(it) } }
+                supportingText = { titleError?.let { Text(it.asString()) } }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -301,7 +305,7 @@ fun CrearServicioScreen(
                 placeholder = { Text("Describe tu servicio, experiencia, disponibilidad, etc.") },
                 shape = RoundedCornerShape(12.dp),
                 isError = descriptionError != null,
-                supportingText = { descriptionError?.let { Text(it) } }
+                supportingText = { descriptionError?.let { Text(it.asString()) } }
             )
             Text("${descripcion.length}/500 caracteres", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
 
@@ -340,7 +344,7 @@ fun CrearServicioScreen(
             }
             priceError?.let {
                 Text(
-                    text = it,
+                    text = it.asString(),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 4.dp)
@@ -361,7 +365,8 @@ fun CrearServicioScreen(
                     }
                 },
                 placeholder = { Text("Selecciona en el mapa") },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                readOnly = true
             )
             Text(
                 "Usar mi dirección actual", 

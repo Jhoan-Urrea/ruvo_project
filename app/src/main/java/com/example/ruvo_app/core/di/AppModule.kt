@@ -69,6 +69,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideCommentRepository(
+        firestore: FirebaseFirestore
+    ): CommentRepository = CommentRepositoryImpl(firestore)
+
+    @Provides
+    @Singleton
     fun provideAuthUseCases(
         login: LoginUseCase,
         register: RegisterUseCase,

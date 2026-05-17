@@ -2,6 +2,7 @@ package com.example.ruvo_app.data.repository
 
 import com.example.ruvo_app.domain.model.*
 import com.example.ruvo_app.domain.repository.UserRepository
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -56,6 +57,27 @@ class UserRepositoryImpl(
         }
     }
 
+    override suspend fun addUserPoints(uid: String, points: Int): Result<Unit> {
+        return try {
+            val userRef = firestore.collection("users").document(uid)
+            
+            // Usamos un transaction para asegurar que el nivel se actualice correctamente basado en los nuevos puntos
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(userRef)
+                val currentPoints = snapshot.getLong("points") ?: 0L
+                val newPoints = currentPoints + points
+                val newLevel = UserLevel.fromPoints(newPoints.toInt())
+                
+                transaction.update(userRef, "points", newPoints)
+                transaction.update(userRef, "level", newLevel.name)
+            }.await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override fun getAllUsers(): Flow<List<User>> = callbackFlow {
         val subscription = firestore.collection("users")
             .addSnapshotListener { snapshot, error ->
@@ -78,13 +100,15 @@ data class UserDto(
     val username: String = "",
     val email: String = "",
     val phone: String = "",
+    val profilePictureUrl: String? = null,
     val role: String = "USER",
     val points: Int = 0,
     val level: String = "PRINCIPIANTE",
     val badges: List<String> = emptyList(),
     val activePosts: Int = 0,
     val finishedPosts: Int = 0,
-    val pendingVerification: Int = 0
+    val pendingVerification: Int = 0,
+    val totalReviews: Int = 0
 ) {
     fun toDomain(id: String) = User(
         id = id,
@@ -92,16 +116,18 @@ data class UserDto(
         username = username,
         email = email,
         phone = phone,
+        profilePictureUrl = profilePictureUrl,
         role = UserRole.valueOf(role),
         reputation = Reputation(
             points = points,
-            level = UserLevel.valueOf(level),
+            level = UserLevel.fromPoints(points), // Calculado dinámicamente
             badges = badges
         ),
         stats = UserStats(
             activePosts = activePosts,
             finishedPosts = finishedPosts,
-            pendingVerification = pendingVerification
+            pendingVerification = pendingVerification,
+            totalReviews = totalReviews
         )
     )
 
@@ -111,13 +137,15 @@ data class UserDto(
             username = user.username,
             email = user.email,
             phone = user.phone,
+            profilePictureUrl = user.profilePictureUrl,
             role = user.role.name,
             points = user.reputation.points,
             level = user.reputation.level.name,
             badges = user.reputation.badges,
             activePosts = user.stats.activePosts,
             finishedPosts = user.stats.finishedPosts,
-            pendingVerification = user.stats.pendingVerification
+            pendingVerification = user.stats.pendingVerification,
+            totalReviews = user.stats.totalReviews
         )
     }
 }

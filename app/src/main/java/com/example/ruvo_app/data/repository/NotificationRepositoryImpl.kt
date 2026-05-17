@@ -29,7 +29,7 @@ class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getNotificationsForUser(userId: String): Flow<List<Notification>> = callbackFlow {
+    override fun getNotifications(userId: String): Flow<List<Notification>> = callbackFlow {
         val subscription = firestore.collection("notifications")
             .whereEqualTo("receiverId", userId)
             .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -46,6 +46,17 @@ class NotificationRepositoryImpl @Inject constructor(
         awaitClose { subscription.remove() }
     }
 
+    override suspend fun markAsRead(notificationId: String): Result<Unit> {
+        return try {
+            firestore.collection("notifications").document(notificationId)
+                .update("isRead", true)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun deleteNotification(notificationId: String): Result<Unit> {
         return try {
             firestore.collection("notifications").document(notificationId).delete().await()
@@ -60,14 +71,16 @@ data class NotificationDto(
     val receiverId: String = "",
     val type: String = "ESTADO_ACTUALIZADO",
     val message: String = "",
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val isRead: Boolean = false
 ) {
     fun toDomain(id: String) = Notification(
         id = id,
         receiverId = receiverId,
         type = try { NotificationType.valueOf(type) } catch(e: Exception) { NotificationType.ESTADO_ACTUALIZADO },
         message = message,
-        timestamp = timestamp
+        timestamp = timestamp,
+        isRead = isRead
     )
 
     companion object {
@@ -75,7 +88,8 @@ data class NotificationDto(
             receiverId = n.receiverId,
             type = n.type.name,
             message = n.message,
-            timestamp = n.timestamp
+            timestamp = n.timestamp,
+            isRead = n.isRead
         )
     }
 }

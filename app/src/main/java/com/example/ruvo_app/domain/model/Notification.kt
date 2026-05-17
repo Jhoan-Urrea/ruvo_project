@@ -5,7 +5,8 @@ data class Notification(
     val receiverId: String,
     val type: NotificationType,
     val message: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val isRead: Boolean = false
 )
 
 enum class NotificationType {

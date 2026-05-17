@@ -18,11 +18,13 @@ service cloud.firestore {
 
     // --- REGLAS DE COLECCIONES ---
 
-    // 1. USUARIOS: Perfil público legible, escritura privada
+    // 1. USUARIOS: Perfil público legible, escritura privada y gamificación protegida
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role) || isModerator();
+      allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role) ||
+                   isModerator() ||
+                   (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points', 'level', 'badges', 'totalReviews']));
     }
 
     // 2. SERVICIOS: Lectura pública, escritura protegida

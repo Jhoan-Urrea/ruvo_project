@@ -41,17 +41,34 @@ fun SearchScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    
+    // Estados para los filtros de ubicación
+    var selectedCountry by remember { mutableStateOf("País") }
+    var selectedRegion by remember { mutableStateOf("Región") }
+    var selectedCity by remember { mutableStateOf("Ciudad") }
+
     val services by viewModel.services.collectAsState()
+    val countries by viewModel.countries.collectAsState()
+    val regions by viewModel.regions.collectAsState()
     val cities by viewModel.cities.collectAsState()
 
-    val filteredServices = remember(searchQuery, services) {
-        if (searchQuery.isBlank()) {
-            services
-        } else {
-            services.filter { service ->
-                service.title.contains(searchQuery, ignoreCase = true) ||
-                service.description.contains(searchQuery, ignoreCase = true)
-            }
+    // Lógica de filtrado inteligente (Cruzado + Búsqueda)
+    val filteredServices = remember(searchQuery, selectedCountry, selectedRegion, selectedCity, services) {
+        services.filter { service ->
+            val matchesQuery = if (searchQuery.isBlank()) true 
+                              else service.title.contains(searchQuery, ignoreCase = true) ||
+                                   service.description.contains(searchQuery, ignoreCase = true)
+            
+            val matchesCountry = if (selectedCountry == "País") true 
+                                else service.country.equals(selectedCountry, ignoreCase = true)
+            
+            val matchesRegion = if (selectedRegion == "Región") true 
+                               else service.region.equals(selectedRegion, ignoreCase = true)
+            
+            val matchesCity = if (selectedCity == "Ciudad") true 
+                             else service.city.equals(selectedCity, ignoreCase = true)
+            
+            matchesQuery && matchesCountry && matchesRegion && matchesCity
         }
     }
 
@@ -109,7 +126,7 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Filtros de Ubicación
+            // Filtros de Ubicación Dinámicos
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -122,9 +139,40 @@ fun SearchScreen(
                     modifier = Modifier.size(20.dp)
                 )
 
-                LocationDropdown(cities.firstOrNull() ?: "Todos", Modifier.weight(1f))
-                LocationDropdown("Region", Modifier.weight(1f))
-                LocationDropdown("Ciudad", Modifier.weight(1f))
+                LocationDropdown(
+                    selectedOption = selectedCountry,
+                    options = countries,
+                    onOptionSelected = { 
+                        selectedCountry = it
+                        selectedRegion = "Región" // Reset dependientes
+                        selectedCity = "Ciudad"
+                    },
+                    modifier = Modifier.weight(1f),
+                    placeholder = "País"
+                )
+
+                LocationDropdown(
+                    selectedOption = selectedRegion,
+                    options = if (selectedCountry == "País") regions else regions.filter { region ->
+                        services.any { it.country == selectedCountry && it.region == region } || region == "Región"
+                    },
+                    onOptionSelected = { 
+                        selectedRegion = it
+                        selectedCity = "Ciudad" // Reset dependientes
+                    },
+                    modifier = Modifier.weight(1f),
+                    placeholder = "Región"
+                )
+
+                LocationDropdown(
+                    selectedOption = selectedCity,
+                    options = if (selectedRegion == "Región") cities else cities.filter { city ->
+                        services.any { it.region == selectedRegion && it.city == city } || city == "Ciudad"
+                    },
+                    onOptionSelected = { selectedCity = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = "Ciudad"
+                )
             }
         }
 

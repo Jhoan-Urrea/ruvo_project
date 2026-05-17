@@ -29,6 +29,10 @@ class DashboardViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    // Price filtering state
+    private val _maxPriceFilter = MutableStateFlow<Float?>(null)
+    val maxPriceFilter = _maxPriceFilter.asStateFlow()
+
     init {
         loadServices()
         loadFilters()
@@ -60,5 +64,9 @@ class DashboardViewModel @Inject constructor(
                 _cities.value = listOf("Ciudad") + list
             }
         }
+    }
+
+    fun setMaxPriceFilter(price: Float?) {
+        _maxPriceFilter.value = price
     }
 }

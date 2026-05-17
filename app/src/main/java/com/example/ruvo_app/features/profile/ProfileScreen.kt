@@ -15,9 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,12 +26,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.component.ServicePostCard
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
+import com.example.ruvo_app.domain.model.PostStatus
 import com.example.ruvo_app.domain.model.ServicePost
 import com.example.ruvo_app.domain.model.User
 import java.util.Locale
@@ -41,6 +39,8 @@ import java.util.Locale
 @Composable
 fun ProfileScreen(
     onSettingsClick: () -> Unit = {},
+    onSolicitudesClick: () -> Unit = {},
+    onMisTrabajosClick: () -> Unit = {},
     onServiceClick: (ServicePost) -> Unit = {},
     viewModel: ProfileViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
@@ -61,7 +61,17 @@ fun ProfileScreen(
                 )
             }
             is ProfileUiState.Success -> {
-                ProfileContent(state.user, state.services, scrollState, onSettingsClick, onServiceClick)
+                ProfileContent(
+                    user = state.user,
+                    services = state.services,
+                    scrollState = scrollState,
+                    onSettingsClick = onSettingsClick,
+                    onSolicitudesClick = onSolicitudesClick,
+                    onMisTrabajosClick = onMisTrabajosClick,
+                    onServiceClick = onServiceClick,
+                    onArchiveClick = { viewModel.archiveService(it) },
+                    onReactivateClick = { viewModel.reactivateService(it) }
+                )
             }
         }
     }
@@ -73,8 +83,14 @@ fun ProfileContent(
     services: List<ServicePost>,
     scrollState: androidx.compose.foundation.ScrollState,
     onSettingsClick: () -> Unit,
-    onServiceClick: (ServicePost) -> Unit
+    onSolicitudesClick: () -> Unit,
+    onMisTrabajosClick: () -> Unit,
+    onServiceClick: (ServicePost) -> Unit,
+    onArchiveClick: (String) -> Unit,
+    onReactivateClick: (String) -> Unit
 ) {
+    var selectedServiceTab by remember { mutableIntStateOf(0) }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -122,16 +138,30 @@ fun ProfileContent(
                         .padding(horizontal = 32.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.logo_ruvo),
-                        contentDescription = "Profile Picture",
+                    Box(
                         modifier = Modifier
                             .size(80.dp)
                             .clip(CircleShape)
                             .background(Color.White)
                             .border(2.dp, Color.White, CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (user.profilePictureUrl != null) {
+                            AsyncImage(
+                                model = user.profilePictureUrl,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_ruvo),
+                                contentDescription = "Default Profile",
+                                modifier = Modifier.size(40.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
@@ -146,7 +176,7 @@ fun ProfileContent(
                             style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.8f))
                         )
                         Text(
-                            text = user.location?.address ?: "Armenia, Quindío",
+                            text = user.location?.address ?: "Ubicación no definida",
                             style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.8f))
                         )
                     }
@@ -185,14 +215,15 @@ fun ProfileContent(
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                             )
                         }
+                        val pointsNeeded = user.reputation.getPointsNeededForNextLevel()
                         Text(
-                            text = "${user.reputation.points} ${stringResource(R.string.profile_points)}",
+                            text = if (pointsNeeded > 0) "Faltan $pointsNeeded XP" else "Nivel Máximo",
                             style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray)
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     LinearProgressIndicator(
-                        progress = { 0.7f },
+                        progress = { user.reputation.getProgressToNextLevel() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
@@ -200,6 +231,42 @@ fun ProfileContent(
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = Color.LightGray.copy(alpha = 0.3f)
                     )
+                    Text(
+                        text = "${user.reputation.points} XP acumulados",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Action Buttons for Provider
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onSolicitudesClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF0F4FF), contentColor = Color(0xFF0047FF))
+                ) {
+                    Icon(Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Solicitudes", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                
+                OutlinedButton(
+                    onClick = onMisTrabajosClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color.LightGray)
+                ) {
+                    Icon(Icons.Default.WorkOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Black)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Mis Trabajos", fontSize = 12.sp, color = Color.Black)
                 }
             }
 
@@ -211,7 +278,7 @@ fun ProfileContent(
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 StatItem(icon = Icons.Outlined.ChatBubbleOutline, count = "${services.size}", label = stringResource(R.string.profile_total_services), iconColor = Color(0xFF4CAF50))
-                StatItem(icon = Icons.Outlined.FavoriteBorder, count = "0", label = stringResource(R.string.profile_votes), iconColor = Color(0xFFE91E63))
+                StatItem(icon = Icons.Outlined.FavoriteBorder, count = "${user.stats.totalReviews}", label = "Votos", iconColor = Color(0xFFE91E63))
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -242,8 +309,14 @@ fun ProfileContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(start = 24.dp, end = 24.dp)
             ) {
-                items(user.reputation.badges.ifEmpty { listOf("Sin insignias") }) { badge ->
-                    AchievementItem(badge)
+                if (user.reputation.badges.isEmpty()) {
+                    item {
+                        Text("Aún no tienes insignias", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(vertical = 20.dp))
+                    }
+                } else {
+                    items(user.reputation.badges) { badge ->
+                        AchievementItem(badge)
+                    }
                 }
             }
 
@@ -256,19 +329,57 @@ fun ProfileContent(
             )
             
             Spacer(modifier = Modifier.height(16.dp))
+
+            TabRow(
+                selectedTabIndex = selectedServiceTab,
+                containerColor = Color.White,
+                contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            ) {
+                Tab(
+                    selected = selectedServiceTab == 0,
+                    onClick = { selectedServiceTab = 0 },
+                    text = { Text("Activos", fontSize = 12.sp) }
+                )
+                Tab(
+                    selected = selectedServiceTab == 1,
+                    onClick = { selectedServiceTab = 1 },
+                    text = { Text("Archivados", fontSize = 12.sp) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
             
             // List of real services from Firestore
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                services.forEach { post ->
-                    ServicePostCard(
-                        post = post,
-                        authorName = user.fullName,
-                        authorRole = user.reputation.level.name,
-                        onClick = { onServiceClick(post) }
+                val filteredServices = if (selectedServiceTab == 0) {
+                    services.filter { it.status != PostStatus.ARCHIVADO }
+                } else {
+                    services.filter { it.status == PostStatus.ARCHIVADO }
+                }
+
+                if (filteredServices.isEmpty()) {
+                    Text(
+                        text = if (selectedServiceTab == 0) "No tienes servicios activos" else "No tienes servicios archivados",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(vertical = 16.dp)
                     )
+                } else {
+                    filteredServices.forEach { post ->
+                        ServicePostCard(
+                            post = post,
+                            authorName = user.fullName,
+                            authorRole = user.reputation.level.name,
+                            showOptions = true,
+                            onArchive = { onArchiveClick(post.id) },
+                            onReactivate = { onReactivateClick(post.id) },
+                            onClick = { onServiceClick(post) }
+                        )
+                    }
                 }
             }
 
@@ -311,6 +422,17 @@ fun StatusRow(icon: ImageVector, label: String, count: String, color: Color) {
 
 @Composable
 fun AchievementItem(title: String) {
+    val (emoji, bgColor) = when (title) {
+        "Bienvenido a Ruvo" -> "🏅" to Color(0xFFE8F5E9)
+        "Primer Contacto" -> "💬" to Color(0xFFE3F2FD)
+        "Emprendedor" -> "🚀" to Color(0xFFFFF3E0)
+        "Popular" -> "✨" to Color(0xFFF3E5F5)
+        "Mano de Obra" -> "🛠️" to Color(0xFFEFEBE9)
+        "Explorador" -> "🔍" to Color(0xFFF1F8E9)
+        "Crítico" -> "⭐" to Color(0xFFFFFDE7)
+        else -> "🎯" to Color(0xFFF5F5F5)
+    }
+
     Surface(
         modifier = Modifier.size(width = 100.dp, height = 120.dp),
         shape = RoundedCornerShape(12.dp),
@@ -323,20 +445,23 @@ fun AchievementItem(title: String) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(Color(0xFFFFF3E0), CircleShape),
+                    .size(44.dp)
+                    .background(bgColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "🎯", fontSize = 20.sp)
+                Text(text = emoji, fontSize = 22.sp)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 12.sp
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 12.sp,
+                    fontSize = 10.sp
                 ),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                color = Color.DarkGray
             )
         }
     }

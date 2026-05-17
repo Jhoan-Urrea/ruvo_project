@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.ruvo_app.domain.model.ServiceRequest
 import com.example.ruvo_app.domain.repository.ServiceRequestRepository
 import com.example.ruvo_app.domain.repository.UserRepository
+import com.example.ruvo_app.domain.service.Achievement
+import com.example.ruvo_app.domain.service.GamificationService
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +19,7 @@ import javax.inject.Inject
 class SolicitarServicioViewModel @Inject constructor(
     private val repository: ServiceRequestRepository,
     private val userRepository: UserRepository,
+    private val gamificationService: GamificationService,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -59,6 +62,9 @@ class SolicitarServicioViewModel @Inject constructor(
 
             val result = repository.createRequest(request)
             if (result.isSuccess) {
+                // GAMIFICACIÓN: Logro Explorador
+                gamificationService.checkAndAwardAchievement(userId, Achievement.Explorador)
+
                 _uiState.value = SolicitarUiState.Success
             } else {
                 _uiState.value = SolicitarUiState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ruvo_app.domain.model.ServicePost
 import com.example.ruvo_app.domain.model.User
+import com.example.ruvo_app.domain.repository.ServiceRepository
 import com.example.ruvo_app.domain.repository.UserRepository
 import com.example.ruvo_app.domain.usecase.GetServicePostsByAuthorUseCase
 import com.example.ruvo_app.domain.usecase.SignOutUseCase
@@ -17,6 +18,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
+    private val serviceRepository: ServiceRepository,
     private val getServicePostsByAuthorUseCase: GetServicePostsByAuthorUseCase,
     private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
@@ -48,6 +50,18 @@ class ProfileViewModel @Inject constructor(
             }.launchIn(viewModelScope)
         } else {
             _uiState.value = ProfileUiState.Error("No hay sesión activa")
+        }
+    }
+
+    fun archiveService(postId: String) {
+        viewModelScope.launch {
+            serviceRepository.archiveService(postId)
+        }
+    }
+
+    fun reactivateService(postId: String) {
+        viewModelScope.launch {
+            serviceRepository.reactivateService(postId)
         }
     }
 
