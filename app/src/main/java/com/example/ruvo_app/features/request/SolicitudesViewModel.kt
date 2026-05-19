@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.ruvo_app.domain.model.Notification
 import com.example.ruvo_app.domain.model.NotificationType
 import com.example.ruvo_app.domain.model.RequestStatus
+import com.example.ruvo_app.domain.model.Review
 import com.example.ruvo_app.domain.model.ServiceRequest
 import com.example.ruvo_app.domain.repository.NotificationRepository
+import com.example.ruvo_app.domain.repository.ReviewRepository
 import com.example.ruvo_app.domain.repository.ServiceRequestRepository
 import com.example.ruvo_app.domain.repository.UserRepository
 import com.example.ruvo_app.domain.service.Achievement
@@ -22,6 +24,7 @@ import javax.inject.Inject
 class SolicitudesViewModel @Inject constructor(
     private val repository: ServiceRequestRepository,
     private val userRepository: UserRepository,
+    private val reviewRepository: ReviewRepository,
     private val notificationRepository: NotificationRepository,
     private val gamificationService: GamificationService,
     private val auth: FirebaseAuth
@@ -93,6 +96,34 @@ class SolicitudesViewModel @Inject constructor(
                         receiverId = request.customerId,
                         type = NotificationType.ESTADO_ACTUALIZADO,
                         message = mensaje
+                    )
+                )
+            }
+        }
+    }
+
+    fun calificarServicio(request: ServiceRequest, rating: Int, comment: String) {
+        viewModelScope.launch {
+            val review = Review(
+                serviceId = request.serviceId,
+                providerId = request.providerId,
+                customerId = request.customerId,
+                customerName = request.customerName,
+                rating = rating,
+                comment = comment
+            )
+            val result = reviewRepository.addReview(review)
+            if (result.isSuccess) {
+                // GAMIFICACIÓN: Logro Crítico al dejar la primera reseña
+                gamificationService.checkAndAwardAchievement(request.customerId, Achievement.Critico)
+                userRepository.addUserPoints(request.customerId, 20)
+                
+                // Opcional: Notificar al proveedor
+                notificationRepository.sendNotification(
+                    Notification(
+                        receiverId = request.providerId,
+                        type = NotificationType.NUEVO_COMENTARIO,
+                        message = "${request.customerName} te ha calificado con $rating estrellas."
                     )
                 )
             }

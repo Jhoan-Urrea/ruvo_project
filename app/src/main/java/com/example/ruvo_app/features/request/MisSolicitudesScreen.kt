@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -17,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.ruvo_app.core.component.StarRatingBar
 import com.example.ruvo_app.domain.model.RequestStatus
 import com.example.ruvo_app.domain.model.ServiceRequest
 
@@ -35,6 +38,19 @@ fun MisSolicitudesScreen(
     val recibidas by viewModel.solicitudesRecibidas.collectAsState()
     val enviadas by viewModel.solicitudesEnviadas.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    
+    var showReviewDialog by remember { mutableStateOf<ServiceRequest?>(null) }
+
+    if (showReviewDialog != null) {
+        CalificarServiceDialog(
+            request = showReviewDialog!!,
+            onDismiss = { showReviewDialog = null },
+            onSubmit = { rating, comment ->
+                viewModel.calificarServicio(showReviewDialog!!, rating, comment)
+                showReviewDialog = null
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -103,7 +119,9 @@ fun MisSolicitudesScreen(
                                 isProviderView = selectedTab == 1,
                                 onAceptar = { viewModel.responderSolicitud(solicitud, RequestStatus.ACEPTADA) },
                                 onRechazar = { viewModel.responderSolicitud(solicitud, RequestStatus.RECHAZADA) },
-                                onCancelar = { viewModel.cancelarSolicitud(solicitud) }
+                                onFinalizar = { viewModel.responderSolicitud(solicitud, RequestStatus.COMPLETADA) },
+                                onCancelar = { viewModel.cancelarSolicitud(solicitud) },
+                                onCalificar = { showReviewDialog = solicitud }
                             )
                         }
                     }
@@ -119,7 +137,9 @@ fun SolicitudItem(
     isProviderView: Boolean,
     onAceptar: () -> Unit,
     onRechazar: () -> Unit,
-    onCancelar: () -> Unit
+    onFinalizar: () -> Unit,
+    onCancelar: () -> Unit,
+    onCalificar: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -150,17 +170,16 @@ fun SolicitudItem(
                 fontSize = 14.sp
             )
             Text(text = "Fecha: ${solicitud.date} a las ${solicitud.time}", color = Color.Gray, fontSize = 12.sp)
-            Text(text = "Ubicación: ${solicitud.location}", color = Color.Gray, fontSize = 12.sp)
             
             if (solicitud.details.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Surface(
                     color = Color(0xFFF5F5F5),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Detalles adicionales:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Text("Detalles de la solicitud:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = solicitud.details,
@@ -171,49 +190,81 @@ fun SolicitudItem(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Acciones según la vista y el estado
-            if (solicitud.status == RequestStatus.PENDIENTE) {
-                Spacer(modifier = Modifier.height(16.dp))
-                if (isProviderView) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+            when (solicitud.status) {
+                RequestStatus.PENDIENTE -> {
+                    if (isProviderView) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onRechazar,
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Rechazar")
+                            }
+                            Button(
+                                onClick = onAceptar,
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Aceptar")
+                            }
+                        }
+                    } else {
                         OutlinedButton(
-                            onClick = onRechazar,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red),
+                            onClick = onCancelar,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Rechazar")
+                            Text("Cancelar Solicitud")
                         }
-                        Button(
-                            onClick = onAceptar,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Aceptar")
-                        }
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = onCancelar,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Cancelar Solicitud")
                     }
                 }
+                RequestStatus.ACEPTADA -> {
+                    if (isProviderView) {
+                        Button(
+                            onClick = onFinalizar,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Check, null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Marcar como completado")
+                        }
+                    }
+                }
+                RequestStatus.COMPLETADA -> {
+                    if (!isProviderView) {
+                        Button(
+                            onClick = onCalificar,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107), contentColor = Color.Black),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Star, null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Calificar servicio", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                else -> {}
             }
         }
     }
@@ -225,9 +276,60 @@ fun EmptyState(message: String) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "📭", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = message, color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(text = message, color = Color.Gray, textAlign = TextAlign.Center)
         }
     }
+}
+
+@Composable
+fun CalificarServiceDialog(
+    request: ServiceRequest,
+    onDismiss: () -> Unit,
+    onSubmit: (Int, String) -> Unit
+) {
+    var rating by remember { mutableIntStateOf(5) }
+    var comment by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Calificar Servicio", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "¿Cómo calificarías el trabajo de ${request.providerName}?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                StarRatingBar(
+                    rating = rating.toFloat(),
+                    selectable = true,
+                    onRatingChanged = { rating = it }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    placeholder = { Text("Escribe un comentario opcional...") },
+                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSubmit(rating, comment) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF))
+            ) {
+                Text("Enviar calificación")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
 
 @Composable

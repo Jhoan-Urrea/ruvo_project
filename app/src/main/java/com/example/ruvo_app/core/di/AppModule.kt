@@ -75,6 +75,13 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideReviewRepository(
+        firestore: FirebaseFirestore,
+        userRepository: UserRepository
+    ): ReviewRepository = ReviewRepositoryImpl(firestore, userRepository)
+
+    @Provides
+    @Singleton
     fun provideAuthUseCases(
         login: LoginUseCase,
         register: RegisterUseCase,
