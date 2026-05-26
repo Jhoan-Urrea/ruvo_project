@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,7 +34,7 @@ import com.example.ruvo_app.core.theme.Ruvo_appTheme
 fun ResetPasswordScreen(
     onBackClick: () -> Unit = {},
     onResetSuccess: () -> Unit = {},
-    viewModel: ResetPasswordViewModel = viewModel()
+    viewModel: ResetPasswordViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }

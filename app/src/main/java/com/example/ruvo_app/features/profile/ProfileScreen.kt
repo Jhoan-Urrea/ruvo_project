@@ -5,8 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,11 +23,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.ruvo_app.R
+import com.example.ruvo_app.core.component.LogrosSection
 import com.example.ruvo_app.core.component.ServicePostCard
 import com.example.ruvo_app.domain.model.PostStatus
 import com.example.ruvo_app.domain.model.ServicePost
@@ -49,7 +47,7 @@ fun ProfileScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets(0.dp) // Edge-to-Edge: Control manual
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when (val state = uiState) {
@@ -61,7 +59,7 @@ fun ProfileScreen(
                         text = state.message,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.Center),
-                        textAlign = TextAlign.Center
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
                 is ProfileUiState.Success -> {
@@ -102,7 +100,6 @@ fun ProfileContent(
             .background(Color(0xFFF5F7FA))
             .verticalScroll(scrollState)
     ) {
-        // Header Azul Inmersivo
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -111,7 +108,7 @@ fun ProfileContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding() // Respeta la barra de estado
+                    .statusBarsPadding()
                     .padding(bottom = 48.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -189,7 +186,6 @@ fun ProfileContent(
             }
         }
 
-        // Estadísticas y Contenido
         Column(
             modifier = Modifier
                 .offset(y = (-24).dp)
@@ -198,7 +194,6 @@ fun ProfileContent(
                 .background(Color.White)
                 .padding(top = 24.dp)
         ) {
-            // Nivel Card
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(16.dp),
@@ -240,7 +235,11 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botones de acción
+            // SECCIÓN DE LOGROS (Usando componente compartido)
+            LogrosSection(badges = user.reputation.badges)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -270,7 +269,6 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Totales
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.SpaceAround
@@ -340,7 +338,6 @@ fun ProfileContent(
                 }
             }
 
-            // Margen para barra de navegación
             Spacer(modifier = Modifier.navigationBarsPadding())
             Spacer(modifier = Modifier.height(32.dp))
         }

@@ -1,5 +1,6 @@
 package com.example.ruvo_app.data.repository
 
+import android.util.Log
 import com.example.ruvo_app.domain.model.Notification
 import com.example.ruvo_app.domain.model.NotificationType
 import com.example.ruvo_app.domain.repository.NotificationRepository
@@ -32,16 +33,19 @@ class NotificationRepositoryImpl @Inject constructor(
     override fun getNotifications(userId: String): Flow<List<Notification>> = callbackFlow {
         val subscription = firestore.collection("notifications")
             .whereEqualTo("receiverId", userId)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    // Evitamos el crash al cerrar sesión ignorando el error de permisos
+                    Log.w("Firestore", "Error en notificaciones: ${error.message}")
+                    trySend(emptyList()) 
                     return@addSnapshotListener
                 }
                 val notifications = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(NotificationDto::class.java)?.toDomain(doc.id)
                 } ?: emptyList()
-                trySend(notifications)
+                
+                // Ordenamos localmente para evitar la necesidad de crear índices compuestos
+                trySend(notifications.sortedByDescending { it.timestamp })
             }
         awaitClose { subscription.remove() }
     }

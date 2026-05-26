@@ -10,4 +10,6 @@ data class ChatMessage(
     val content: String = "",
     val timestamp: Long = System.currentTimeMillis(),
     val isRead: Boolean = false
-)
+) {
+    constructor() : this("", "", "", "", 0L, false)
+}

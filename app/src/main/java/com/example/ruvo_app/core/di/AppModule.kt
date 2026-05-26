@@ -100,13 +100,15 @@ object AppModule {
         register: RegisterUseCase,
         signOut: SignOutUseCase,
         getCurrentUser: GetCurrentUserUseCase,
-        sendPasswordReset: SendPasswordResetEmailUseCase
+        sendPasswordReset: SendPasswordResetEmailUseCase,
+        changePassword: ChangePasswordUseCase
     ) = AuthUseCases(
         login = login,
         register = register,
         signOut = signOut,
         getCurrentUser = getCurrentUser,
-        sendPasswordReset = sendPasswordReset
+        sendPasswordReset = sendPasswordReset,
+        changePassword = changePassword
     )
 
     @Provides
@@ -132,6 +134,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSendPasswordResetEmailUseCase(repository: AuthRepository) = SendPasswordResetEmailUseCase(repository)
+
+    @Provides
+    @Singleton
+    fun provideChangePasswordUseCase(repository: AuthRepository) = ChangePasswordUseCase(repository)
 
     @Provides
     @Singleton
@@ -163,5 +169,6 @@ data class AuthUseCases(
     val register: RegisterUseCase,
     val signOut: SignOutUseCase,
     val getCurrentUser: GetCurrentUserUseCase,
-    val sendPasswordReset: SendPasswordResetEmailUseCase
+    val sendPasswordReset: SendPasswordResetEmailUseCase,
+    val changePassword: ChangePasswordUseCase
 )

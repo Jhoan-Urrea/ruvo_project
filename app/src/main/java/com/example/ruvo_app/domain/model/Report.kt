@@ -5,27 +5,19 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Report(
     val id: String = "",
-    val reportedId: String, // ID del servicio o usuario reportado
-    val reporterId: String, // ID de quien reporta
-    val type: ReportType,
-    val reason: String,
-    val description: String,
+    val reportedId: String = "",
+    val reporterId: String = "",
+    val type: ReportType = ReportType.SERVICIO,
+    val reason: String = "",
+    val description: String = "",
     val status: ReportStatus = ReportStatus.PENDIENTE,
     val createdAt: Long = System.currentTimeMillis(),
     val resolvedAt: Long? = null,
     val resolvedBy: String? = null,
     val resolutionNote: String? = null
-)
-
-enum class ReportType {
-    SERVICIO,
-    USUARIO,
-    MENSAJE
+) {
+    constructor() : this("")
 }
 
-enum class ReportStatus {
-    PENDIENTE,
-    EN_REVISION,
-    RESUELTO,
-    DESESTIMADO
-}
+enum class ReportType { SERVICIO, USUARIO, MENSAJE }
+enum class ReportStatus { PENDIENTE, EN_REVISION, RESUELTO, DESESTIMADO }

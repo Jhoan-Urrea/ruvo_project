@@ -278,6 +278,17 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
                             location = serviceDetail.location
                         )
                     )
+                },
+                onChatClick = { user ->
+                    navController.navigate(
+                        Screen.Chat(
+                            providerId = user.id,
+                            providerName = user.fullName,
+                            providerSpecialty = user.role.name,
+                            providerImageRes = serviceDetail.providerImageRes,
+                            providerImageUrl = user.profilePictureUrl
+                        )
+                    )
                 }
             )
         }

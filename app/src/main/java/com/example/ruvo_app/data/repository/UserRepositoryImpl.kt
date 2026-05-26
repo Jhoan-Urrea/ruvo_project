@@ -1,5 +1,6 @@
 package com.example.ruvo_app.data.repository
 
+import android.util.Log
 import com.example.ruvo_app.domain.model.*
 import com.example.ruvo_app.domain.repository.UserRepository
 import com.google.firebase.firestore.FieldValue
@@ -14,10 +15,17 @@ class UserRepositoryImpl(
 ) : UserRepository {
 
     override fun getUserProfile(uid: String): Flow<Result<User>> = callbackFlow {
+        if (uid.isBlank()) {
+            trySend(Result.failure(Exception("UID vacío")))
+            close()
+            return@callbackFlow
+        }
+
         val subscription = firestore.collection("users").document(uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(Result.failure(error))
+                    // Evitamos crash al cerrar sesión: si no hay permisos, simplemente no enviamos nada nuevo
+                    Log.w("UserRepository", "Error al obtener perfil: ${error.message}")
                     return@addSnapshotListener
                 }
 
@@ -81,7 +89,8 @@ class UserRepositoryImpl(
         val subscription = firestore.collection("users")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w("UserRepository", "Error en getAllUsers: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val users = snapshot?.documents?.mapNotNull { doc ->
@@ -117,7 +126,7 @@ data class UserDto(
         email = email,
         phone = phone,
         profilePictureUrl = profilePictureUrl,
-        role = UserRole.valueOf(role),
+        role = try { UserRole.valueOf(role) } catch(e: Exception) { UserRole.USER },
         reputation = Reputation(
             points = points,
             rating = rating.toFloat(),

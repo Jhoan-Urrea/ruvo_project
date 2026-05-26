@@ -126,7 +126,7 @@ fun ChatScreen(
                 }
             )
         },
-        contentWindowInsets = WindowInsets(0.dp) // Edge-to-Edge: Control manual
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         Box(
             modifier = Modifier

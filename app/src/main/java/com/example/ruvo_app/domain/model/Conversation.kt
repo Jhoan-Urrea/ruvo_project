@@ -13,4 +13,6 @@ data class Conversation(
     val otherUserName: String = "",
     val otherUserRole: String = "",
     val otherUserImage: String = ""
-)
+) {
+    constructor() : this("", emptyList(), "", 0L, emptyMap(), "", "", "")
+}

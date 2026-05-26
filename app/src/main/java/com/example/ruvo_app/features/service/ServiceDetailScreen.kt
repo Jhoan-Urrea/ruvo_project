@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
@@ -41,6 +42,7 @@ import com.example.ruvo_app.domain.model.Comment
 import com.example.ruvo_app.domain.model.PostStatus
 import com.example.ruvo_app.domain.model.Review
 import com.example.ruvo_app.domain.model.ServicePost
+import com.example.ruvo_app.domain.model.User
 import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -58,6 +60,7 @@ fun ServiceDetailScreen(
     onBackClick: () -> Unit,
     onViewProfileClick: (String) -> Unit = {},
     onSolicitarClick: (String) -> Unit = {},
+    onChatClick: (User) -> Unit = {},
     viewModel: ServiceDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -140,7 +143,13 @@ fun ServiceDetailScreen(
                             ProviderSection(author, onViewProfileClick)
 
                             Spacer(modifier = Modifier.height(24.dp))
-                            ActionButtons(post, state.isLiked, viewModel::toggleLike, onSolicitarClick)
+                            ActionButtons(
+                                post = post, 
+                                isLiked = state.isLiked, 
+                                onLikeToggle = viewModel::toggleLike, 
+                                onSolicitarClick = onSolicitarClick,
+                                onChatClick = { onChatClick(author) }
+                            )
                             
                             Spacer(modifier = Modifier.height(32.dp))
                             HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
@@ -562,7 +571,7 @@ fun PriceCard(post: ServicePost) {
 }
 
 @Composable
-fun ProviderSection(author: com.example.ruvo_app.domain.model.User, onViewProfileClick: (String) -> Unit) {
+fun ProviderSection(author: User, onViewProfileClick: (String) -> Unit) {
     Text("Proveedor", fontWeight = FontWeight.Bold, color = Color.Black)
     Spacer(modifier = Modifier.height(12.dp))
     Row(
@@ -591,22 +600,45 @@ fun ProviderSection(author: com.example.ruvo_app.domain.model.User, onViewProfil
 }
 
 @Composable
-fun ActionButtons(post: ServicePost, isLiked: Boolean, onLikeToggle: (String) -> Unit, onSolicitarClick: (String) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+fun ActionButtons(
+    post: ServicePost, 
+    isLiked: Boolean, 
+    onLikeToggle: (String) -> Unit, 
+    onSolicitarClick: (String) -> Unit,
+    onChatClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(), 
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         OutlinedButton(
             onClick = { onLikeToggle(post.id) },
-            modifier = Modifier.weight(0.4f).height(56.dp),
+            modifier = Modifier.size(56.dp),
             shape = RoundedCornerShape(28.dp),
+            contentPadding = PaddingValues(0.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = if(isLiked) Color.Red else Color.Gray)
         ) {
             Icon(if(isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null)
         }
+        
+        OutlinedButton(
+            onClick = onChatClick,
+            modifier = Modifier.weight(0.5f).height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        ) {
+            Icon(Icons.Default.ChatBubbleOutline, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Chat", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        }
+
         Button(
             onClick = { onSolicitarClick(post.id) },
             modifier = Modifier.weight(1f).height(56.dp),
             shape = RoundedCornerShape(28.dp)
         ) {
-            Text("Solicitar servicio", fontWeight = FontWeight.Bold)
+            Text("Solicitar", fontWeight = FontWeight.Bold)
         }
     }
 }

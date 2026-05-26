@@ -2,13 +2,19 @@ package com.example.ruvo_app.features.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ruvo_app.domain.usecase.ChangePasswordUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ResetPasswordViewModel : ViewModel() {
+@HiltViewModel
+class ResetPasswordViewModel @Inject constructor(
+    private val changePasswordUseCase: ChangePasswordUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ResetPasswordUiState())
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
@@ -48,10 +54,18 @@ class ResetPasswordViewModel : ViewModel() {
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            // Simular llamada a API
-            kotlinx.coroutines.delay(1500)
-            _uiState.update { it.copy(isLoading = false, isPasswordReset = true) }
-            onSuccess()
+            
+            val result = changePasswordUseCase(state.newPassword)
+            
+            result.onSuccess {
+                _uiState.update { it.copy(isLoading = false, isPasswordReset = true) }
+                onSuccess()
+            }.onFailure { e ->
+                _uiState.update { it.copy(
+                    isLoading = false, 
+                    error = e.message ?: "Ocurrió un error al cambiar la contraseña"
+                ) }
+            }
         }
     }
 }

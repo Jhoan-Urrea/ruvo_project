@@ -83,121 +83,130 @@ fun SearchScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .statusBarsPadding()
-                .padding(bottom = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Buscador",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-
-            TextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(54.dp)
-                    .clip(RoundedCornerShape(27.dp)),
-                placeholder = { Text("¿Qué servicio buscas?", color = Color.Gray, fontSize = 14.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
-                trailingIcon = { 
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, null) }
-                    } else {
-                        IconButton(onClick = { showPriceFilter = true }) {
-                            Icon(Icons.Default.FilterList, null, tint = if (maxPriceFilter != null) MaterialTheme.colorScheme.primary else Color.Black)
-                        }
-                    }
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFF1F3F4),
-                    unfocusedContainerColor = Color(0xFFF1F3F4),
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            Surface(
+                color = Color.White,
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                LocationDropdown(
-                    selectedOption = selectedCountry,
-                    options = countries,
-                    onOptionSelected = { selectedCountry = it; selectedRegion = "Región"; selectedCity = "Ciudad" },
-                    modifier = Modifier.weight(1f),
-                    placeholder = "País"
-                )
-                LocationDropdown(
-                    selectedOption = selectedRegion,
-                    options = if (selectedCountry == "País") regions else regions.filter { r -> services.any { it.country == selectedCountry && it.region == r } || r == "Región" },
-                    onOptionSelected = { selectedRegion = it; selectedCity = "Ciudad" },
-                    modifier = Modifier.weight(1f),
-                    placeholder = "Región"
-                )
-                LocationDropdown(
-                    selectedOption = selectedCity,
-                    options = if (selectedRegion == "Región") cities else cities.filter { c -> services.any { it.region == selectedRegion && it.city == c } || c == "Ciudad" },
-                    onOptionSelected = { selectedCity = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = "Ciudad"
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Buscador",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
 
-        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(27.dp)),
+                        placeholder = { Text("¿Qué servicio buscas?", color = Color.Gray, fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
+                        trailingIcon = { 
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, null) }
+                            } else {
+                                IconButton(onClick = { showPriceFilter = true }) {
+                                    Icon(Icons.Default.FilterList, null, tint = if (maxPriceFilter != null) MaterialTheme.colorScheme.primary else Color.Black)
+                                }
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFFF1F3F4),
+                            unfocusedContainerColor = Color(0xFFF1F3F4),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                        singleLine = true
+                    )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(filteredServices) { post ->
-                SearchServiceCard(
-                    post = post,
-                    onClick = {
-                        onServiceClick(
-                            Screen.DetalleServicio(
-                                id = post.id, title = post.title, description = post.description,
-                                category = post.category.name, location = post.addressText,
-                                priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
-                                providerId = post.authorId, providerName = post.authorName,
-                                providerSpecialty = "Especialista", providerImageRes = R.drawable.isotipo,
-                                rating = post.rating, reviewsCount = post.reviewsCount,
-                                imageRes = R.drawable.card_service,
-                                imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
-                            )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LocationDropdown(
+                            selectedOption = selectedCountry,
+                            options = countries,
+                            onOptionSelected = { selectedCountry = it; selectedRegion = "Región"; selectedCity = "Ciudad" },
+                            modifier = Modifier.weight(1f),
+                            placeholder = "País"
+                        )
+                        LocationDropdown(
+                            selectedOption = selectedRegion,
+                            options = if (selectedCountry == "País") regions else regions.filter { r -> services.any { it.country == selectedCountry && it.region == r } || r == "Región" },
+                            onOptionSelected = { selectedRegion = it; selectedCity = "Ciudad" },
+                            modifier = Modifier.weight(1f),
+                            placeholder = "Región"
+                        )
+                        LocationDropdown(
+                            selectedOption = selectedCity,
+                            options = if (selectedRegion == "Región") cities else cities.filter { c -> services.any { it.region == selectedRegion && it.city == c } || c == "Ciudad" },
+                            onOptionSelected = { selectedCity = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = "Ciudad"
                         )
                     }
-                )
+                }
             }
-            
-            if (filteredServices.isEmpty()) {
-                item {
-                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("No se encontraron servicios", color = Color.Gray)
+        },
+        containerColor = Color(0xFFF8F9FA),
+        contentWindowInsets = WindowInsets(0.dp)
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filteredServices) { post ->
+                    SearchServiceCard(
+                        post = post,
+                        onClick = {
+                            onServiceClick(
+                                Screen.DetalleServicio(
+                                    id = post.id, title = post.title, description = post.description,
+                                    category = post.category.name, location = post.addressText,
+                                    priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
+                                    providerId = post.authorId, providerName = post.authorName,
+                                    providerSpecialty = "Especialista", providerImageRes = R.drawable.isotipo,
+                                    rating = post.rating, reviewsCount = post.reviewsCount,
+                                    imageRes = R.drawable.card_service,
+                                    imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
+                                )
+                            )
+                        }
+                    )
+                }
+                
+                if (filteredServices.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text("No se encontraron servicios", color = Color.Gray)
+                            }
                         }
                     }
                 }

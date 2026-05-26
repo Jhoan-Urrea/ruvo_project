@@ -2,10 +2,10 @@ package com.example.ruvo_app.domain.model
 
 data class User(
     val id: String = "",
-    val fullName: String,
+    val fullName: String = "",
     val phone: String = "",
     val username: String = "",
-    val email: String,
+    val email: String = "",
     val profilePictureUrl: String? = null,
     val role: UserRole = UserRole.USER,
     val status: AccountStatus = AccountStatus.ACTIVE,
@@ -13,22 +13,17 @@ data class User(
     val location: Location? = null,
     val reputation: Reputation = Reputation(),
     val stats: UserStats = UserStats()
-)
-
-enum class UserRole {
-    USER,
-    MODERATOR
+) {
+    constructor() : this(id = "")
 }
 
-enum class AccountStatus {
-    ACTIVE,
-    WARNING,
-    BLOCKED
-}
+enum class UserRole { USER, MODERATOR }
+
+enum class AccountStatus { ACTIVE, WARNING, BLOCKED }
 
 data class Location(
-    val latitude: Double,
-    val longitude: Double,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
     val address: String? = null
 )
 
@@ -38,10 +33,9 @@ data class Reputation(
     val level: UserLevel = UserLevel.PRINCIPIANTE,
     val badges: List<String> = emptyList()
 ) {
-    // Lógica para la barra de progreso
     fun getProgressToNextLevel(): Float {
         val currentLevelMin = level.minPoints
-        val nextLevelMin = level.next()?.minPoints ?: (currentLevelMin * 2) // Si es Maestro, duplicamos
+        val nextLevelMin = level.next()?.minPoints ?: (currentLevelMin * 2)
         val range = nextLevelMin - currentLevelMin
         val progress = points - currentLevelMin
         return (progress.toFloat() / range.toFloat()).coerceIn(0f, 1f)
@@ -54,13 +48,8 @@ data class Reputation(
 }
 
 enum class UserLevel(val minPoints: Int) {
-    PRINCIPIANTE(0),
-    PROFESIONAL(501),
-    EXPERTO(1501),
-    MAESTRO(4001);
-
+    PRINCIPIANTE(0), PROFESIONAL(501), EXPERTO(1501), MAESTRO(4001);
     fun next(): UserLevel? = entries.getOrNull(ordinal + 1)
-    
     companion object {
         fun fromPoints(points: Int): UserLevel {
             return entries.findLast { points >= it.minPoints } ?: PRINCIPIANTE

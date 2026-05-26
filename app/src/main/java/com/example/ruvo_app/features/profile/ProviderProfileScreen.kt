@@ -14,7 +14,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.CardMembership
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material3.*
@@ -27,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +37,7 @@ import com.example.ruvo_app.core.navigation.Screen
 import com.example.ruvo_app.domain.model.ServicePost
 import com.example.ruvo_app.domain.model.User
 import com.example.ruvo_app.core.component.ReportDialog
+import com.example.ruvo_app.core.component.LogrosSection
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,7 +103,8 @@ fun ProviderProfileScreen(
                     Text(
                         text = state.message,
                         modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
                     )
                 }
                 is ProviderProfileUiState.Success -> {
@@ -244,12 +246,16 @@ fun ProviderProfileContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // SECCIÓN DE LOGROS (INSIGNIAS) - Usando componente compartido
+            LogrosSection(badges = user.reputation.badges, title = "Logros Obtenidos", emptyMessage = "Este proveedor aún no ha ganado insignias.")
+
+            Spacer(modifier = Modifier.height(24.dp))
             
             InfoSection(
                 title = "ACERCA DE",
                 items = listOf(
-                    InfoItemData(Icons.Outlined.CalendarMonth, "Miembro desde", "enero de 2025"),
-                    InfoItemData(Icons.Outlined.CardMembership, "Insignias", "${user.reputation.badges.size}")
+                    InfoItemData(Icons.Outlined.CalendarMonth, "Miembro desde", "enero de 2025")
                 )
             )
 

@@ -56,6 +56,16 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updatePassword(newPassword: String): Result<Unit> {
+        return try {
+            val user = firebaseAuth.currentUser ?: throw Exception("Usuario no autenticado")
+            user.updatePassword(newPassword).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(AuthErrorMapper.map(e))
+        }
+    }
+
     override fun getCurrentUser(): Flow<User?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { auth ->
             val firebaseUser = auth.currentUser

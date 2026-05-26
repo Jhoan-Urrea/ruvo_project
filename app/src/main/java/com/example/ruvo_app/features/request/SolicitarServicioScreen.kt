@@ -27,10 +27,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
 import java.time.Instant
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -51,6 +54,7 @@ fun SolicitarServicioScreen(
     var detalles by remember { mutableStateOf("") }
     
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
     var showUrgencyMenu by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -68,6 +72,7 @@ fun SolicitarServicioScreen(
         }
     }
 
+    // Date Picker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
         DatePickerDialog(
@@ -89,6 +94,57 @@ fun SolicitarServicioScreen(
         }
     }
 
+    // Time Picker Dialog
+    if (showTimePicker) {
+        val timePickerState = rememberTimePickerState(is24Hour = false)
+        
+        Dialog(
+            onDismissRequest = { showTimePicker = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .width(IntrinsicSize.Min)
+                    .height(IntrinsicSize.Min)
+                    .background(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Seleccionar hora",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 20.dp),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    TimePicker(state = timePickerState)
+                    Row(
+                        modifier = Modifier
+                            .padding(top = 24.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showTimePicker = false }) {
+                            Text("Cancelar")
+                        }
+                        TextButton(onClick = {
+                            val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                            val formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault())
+                            hora = selectedTime.format(formatter)
+                            showTimePicker = false
+                        }) {
+                            Text("Aceptar")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -100,10 +156,10 @@ fun SolicitarServicioScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
-                windowInsets = WindowInsets.statusBars // Edge-to-Edge: Barra de estado
+                windowInsets = WindowInsets.statusBars
             )
         },
-        contentWindowInsets = WindowInsets(0.dp) // Control manual de insets
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -176,10 +232,16 @@ fun SolicitarServicioScreen(
                             Text("Hora *", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
                             OutlinedTextField(
                                 value = hora,
-                                onValueChange = { hora = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("Ej: 10:00 AM", fontSize = 14.sp) },
-                                shape = RoundedCornerShape(10.dp)
+                                onValueChange = {},
+                                readOnly = true,
+                                modifier = Modifier.fillMaxWidth().clickable { showTimePicker = true },
+                                placeholder = { Text("Seleccionar", fontSize = 14.sp) },
+                                shape = RoundedCornerShape(10.dp),
+                                enabled = false,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledTextColor = Color.Black,
+                                    disabledBorderColor = Color.LightGray
+                                )
                             )
                         }
                     }

@@ -18,31 +18,35 @@ service cloud.firestore {
 
     // --- REGLAS DE COLECCIONES ---
 
-    // 1. USUARIOS: Perfil público legible, escritura privada y gamificación protegida
+    // 1. USUARIOS: Perfil público legible, pero edición protegida.
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role) ||
-                   isModerator() ||
-                   (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points', 'level', 'badges', 'totalReviews', 'rating']));
+      allow update: if isModerator() ||
+                   // El usuario puede editar su info personal pero NO su rol.
+                   (isOwner(userId) && request.resource.data.role == resource.data.role) ||
+                   // Permite que otros (clientes) actualicen campos de reputación tras una reseña.
+                   (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys()
+                    .hasOnly(['points', 'level', 'badges', 'totalReviews', 'rating']));
     }
 
-    // 2. SERVICIOS: Lectura pública, escritura protegida con validación de IA
+    // 2. SERVICIOS: Lectura pública. Creación y edición protegida por IA.
     match /services_posts/{postId} {
       allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isModerator() ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'rating', 'reviewsCount'])) ||
-        (request.auth.uid == resource.data.authorId &&
-          // El autor no puede marcar como VERIFICADO si el score de confianza es bajo.
-          (request.resource.data.status != 'VERIFICADO' || request.resource.data.trustScore > 80)
-        )
+        // Permitir Likes, feedback de IA y contadores de rating.
+        (request.resource.data.diff(resource.data).affectedKeys()
+         .hasOnly(['likedBy', 'rating', 'reviewsCount', 'aiFeedbackUseful'])) ||
+        // El autor puede editar su post si no intenta falsificar el estado VERIFICADO.
+        (isOwner(resource.data.authorId) &&
+          (request.resource.data.status != 'VERIFICADO' || resource.data.trustScore > 80))
       );
-      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isModerator());
+      allow delete: if isSignedIn() && (isOwner(resource.data.authorId) || isModerator());
     }
 
-    // 3. MENSAJERÍA: Privacidad total entre participantes
+    // 3. MENSAJERÍA: Privacidad absoluta entre los participantes.
     match /conversations/{convId} {
       allow read, update: if isSignedIn() && request.auth.uid in resource.data.participants;
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
@@ -53,13 +57,13 @@ service cloud.firestore {
       }
     }
 
-    // 4. NOTIFICACIONES: Privacidad absoluta del destinatario
+    // 4. NOTIFICACIONES: Solo el destinatario puede gestionar sus alertas.
     match /notifications/{notificationId} {
       allow read, update, delete: if isSignedIn() && resource.data.receiverId == request.auth.uid;
       allow create: if isSignedIn();
     }
 
-    // 5. SOLICITUDES DE SERVICIO: Privacidad entre cliente y proveedor y supervisión de moderadores
+    // 5. SOLICITUDES DE SERVICIO: Interacción privada entre cliente y proveedor.
     match /service_requests/{requestId} {
       allow create: if isSignedIn();
       allow read, update: if isSignedIn() && (
@@ -69,28 +73,28 @@ service cloud.firestore {
       );
     }
 
-    // 6. REPORTES: Solo creación y lectura del autor o moderador
+    // 6. REPORTES: Solo creación y lectura del autor o moderadores.
     match /reports/{reportId} {
       allow create: if isSignedIn();
       allow read: if isSignedIn() && (resource.data.reporterId == request.auth.uid || isModerator());
       allow update: if isModerator();
     }
 
-    // 7. RESEÑAS: Lectura pública y creación por parte del cliente autenticado
+    // 7. RESEÑAS: Lectura pública. Solo el cliente puede crear la reseña.
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
       allow delete: if isModerator();
     }
 
-    // 8. COMENTARIOS: Lectura pública y creación por usuarios autenticados
+    // 8. COMENTARIOS: Públicos. Los autores pueden borrar sus comentarios.
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isModerator());
     }
 
-    // BLOQUEO GLOBAL
+    // BLOQUEO GLOBAL: Denegar todo lo que no esté permitido arriba.
     match /{document=**} {
       allow read, write: if false;
     }
