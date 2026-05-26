@@ -3,7 +3,9 @@ package com.example.ruvo_app.features.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ruvo_app.data.local.UserPreferencesManager
+import com.example.ruvo_app.domain.model.Notification
 import com.example.ruvo_app.domain.model.User
+import com.example.ruvo_app.domain.repository.NotificationRepository
 import com.example.ruvo_app.domain.repository.UserRepository
 import com.example.ruvo_app.domain.usecase.*
 import com.example.ruvo_app.domain.util.AuthError
@@ -24,11 +26,17 @@ class AuthViewModel @Inject constructor(
     private val validatePasswordUseCase: ValidatePasswordUseCase,
     private val validateUsernameUseCase: ValidateUsernameUseCase,
     private val userRepository: UserRepository,
+    private val notificationRepository: NotificationRepository,
     private val userPreferencesManager: UserPreferencesManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Loading)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _newNotificationEvent = MutableSharedFlow<Notification>()
+    val newNotificationEvent = _newNotificationEvent.asSharedFlow()
+
+    private var lastNotificationTimestamp: Long = System.currentTimeMillis()
 
     init {
         checkAuthStatus()
@@ -39,8 +47,23 @@ class AuthViewModel @Inject constructor(
             .onEach { user ->
                 if (user != null) {
                     loadFullProfile(user.id)
+                    observeNotifications(user.id)
                 } else {
                     _uiState.value = AuthUiState.Unauthenticated
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeNotifications(uid: String) {
+        notificationRepository.getNotifications(uid)
+            .onEach { notifications ->
+                val latest = notifications.firstOrNull()
+                if (latest != null && latest.timestamp > lastNotificationTimestamp && !latest.isRead) {
+                    _newNotificationEvent.emit(latest)
+                    lastNotificationTimestamp = latest.timestamp
+                } else if (latest != null) {
+                    lastNotificationTimestamp = latest.timestamp
                 }
             }
             .launchIn(viewModelScope)

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -44,6 +46,7 @@ fun SolicitarServicioScreen(
     var fecha by remember { mutableStateOf("") }
     var hora by remember { mutableStateOf("") }
     var ubicacion by remember { mutableStateOf(data.location) }
+    var offeredPrice by remember { mutableStateOf("") }
     var urgencia by remember { mutableStateOf("Baja prioridad") }
     var detalles by remember { mutableStateOf("") }
     
@@ -51,7 +54,13 @@ fun SolicitarServicioScreen(
     var showUrgencyMenu by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
-    val isFormValid = fecha.isNotBlank() && hora.isNotBlank() && ubicacion.isNotBlank() && uiState !is SolicitarUiState.Loading
+    val scrollState = rememberScrollState()
+
+    val isFormValid = fecha.isNotBlank() && 
+                     hora.isNotBlank() && 
+                     ubicacion.isNotBlank() && 
+                     offeredPrice.isNotBlank() &&
+                     uiState !is SolicitarUiState.Loading
 
     LaunchedEffect(uiState) {
         if (uiState is SolicitarUiState.Success) {
@@ -81,230 +90,172 @@ fun SolicitarServicioScreen(
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Solicitar servicio", fontWeight = FontWeight.Bold) },
+                title = { Text("Solicitar servicio", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
+                windowInsets = WindowInsets.statusBars // Edge-to-Edge: Barra de estado
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp) // Control manual de insets
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF8F9FA))
+                .padding(paddingValues)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .background(Color(0xFFF8F9FA))
+                    .imePadding()
+                    .verticalScroll(scrollState)
             ) {
-                // Card del Servicio y Proveedor
+                // Card Informativa
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(
                                 painter = painterResource(id = data.serviceImageRes),
                                 contentDescription = null,
-                                modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)),
+                                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
                                 contentScale = ContentScale.Crop
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
                             Column {
-                                Surface(color = Color(0xFFE8EFFF), shape = RoundedCornerShape(4.dp)) {
-                                    Text(data.serviceCategory, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 10.sp, color = Color(0xFF0047FF), fontWeight = FontWeight.Bold)
-                                }
                                 Text(data.serviceTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text(data.servicePriceRange, color = Color.Gray, fontSize = 14.sp)
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = Color(0xFFF1F3F4))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = data.providerImageRes),
-                                contentDescription = null,
-                                modifier = Modifier.size(40.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(data.providerName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text(data.providerSpecialty, color = Color.Gray, fontSize = 12.sp)
+                                Text(data.serviceCategory, color = Color.Gray, fontSize = 12.sp)
+                                Text(data.servicePriceRange, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             }
                         }
                     }
                 }
 
-                // Formulario de Detalles
+                // Formulario
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White)
-                        .padding(16.dp)
+                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.CalendarMonth, null, tint = Color(0xFF0047FF))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Detalles de la solicitud", fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Detalles de tu solicitud", fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Fecha preferida *", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Fecha *", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
                             OutlinedTextField(
                                 value = fecha,
                                 onValueChange = {},
                                 readOnly = true,
-                                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                                placeholder = { Text("dd / mm / aaaa", fontSize = 12.sp) },
                                 modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
+                                placeholder = { Text("Seleccionar", fontSize = 14.sp) },
+                                shape = RoundedCornerShape(10.dp),
                                 enabled = false,
-                                trailingIcon = { Icon(Icons.Outlined.CalendarMonth, null) },
-                                colors = OutlinedTextFieldDefaults.colors(disabledBorderColor = Color.LightGray, disabledTextColor = Color.Black, disabledTrailingIconColor = Color.Gray),
-                                shape = RoundedCornerShape(8.dp)
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledTextColor = Color.Black,
+                                    disabledBorderColor = Color.LightGray
+                                )
                             )
                         }
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Hora preferida *", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Hora *", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
                             OutlinedTextField(
                                 value = hora,
                                 onValueChange = { hora = it },
-                                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                                placeholder = { Text("-- : --", fontSize = 12.sp) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
+                                placeholder = { Text("Ej: 10:00 AM", fontSize = 14.sp) },
+                                shape = RoundedCornerShape(10.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Ubicación del servicio", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = ubicacion,
-                        onValueChange = { ubicacion = it },
-                        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingIcon = { Icon(Icons.Outlined.LocationOn, null) },
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    Text("Cobertura: 5 km desde $ubicacion", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Urgencia", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box {
+                    Column {
+                        Text("Tu presupuesto (COP) *", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
                         OutlinedTextField(
-                            value = urgencia,
-                            onValueChange = {},
-                            readOnly = true,
-                            modifier = Modifier.fillMaxWidth().clickable { showUrgencyMenu = true },
-                            enabled = false,
-                            leadingIcon = { Icon(Icons.Default.Circle, null, tint = if(urgencia == "Baja prioridad") Color(0xFF2ECC71) else Color(0xFFFFC107), modifier = Modifier.size(12.dp)) },
-                            trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null) },
-                            colors = OutlinedTextFieldDefaults.colors(disabledBorderColor = Color.LightGray, disabledTextColor = Color.Black),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        DropdownMenu(expanded = showUrgencyMenu, onDismissRequest = { showUrgencyMenu = false }) {
-                            DropdownMenuItem(text = { Text("Baja prioridad") }, onClick = { urgencia = "Baja prioridad"; showUrgencyMenu = false })
-                            DropdownMenuItem(text = { Text("Prioridad normal") }, onClick = { urgencia = "Prioridad normal"; showUrgencyMenu = false })
-                            DropdownMenuItem(text = { Text("Urgente") }, onClick = { urgencia = "Urgente"; showUrgencyMenu = false })
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Detalles adicionales", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = detalles,
-                        onValueChange = { if(it.length <= 500) detalles = it },
-                        placeholder = { Text("Describe con más detalle lo que necesitas...", fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth().height(100.dp),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    Text("${detalles.length}/500", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.align(Alignment.End))
-                }
-
-                // Nota sobre el precio
-                Surface(
-                    modifier = Modifier.padding(16.dp),
-                    color = Color(0xFFE8F4FD),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD1E9FF))
-                ) {
-                    Row(modifier = Modifier.padding(16.dp)) {
-                        Icon(Icons.Default.AttachMoney, null, tint = Color.White, modifier = Modifier.size(24.dp).background(Color(0xFF0047FF), CircleShape).padding(4.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Sobre el precio", fontWeight = FontWeight.Bold, color = Color(0xFF0047FF))
-                            Text("El rango de precio es estimado. El proveedor te enviará una cotización exacta según los detalles de tu solicitud.", fontSize = 12.sp, color = Color(0xFF0047FF))
-                        }
-                    }
-                }
-
-                // Botón Enviar
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (uiState is SolicitarUiState.Error) {
-                        Text(
-                            text = (uiState as SolicitarUiState.Error).message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            value = offeredPrice,
+                            onValueChange = { if (it.all { c -> c.isDigit() }) offeredPrice = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("¿Cuánto ofreces?", color = Color.Gray) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(10.dp),
+                            prefix = { Text("$ ") }
                         )
                     }
 
-                    Button(
-                        onClick = {
-                            viewModel.enviarSolicitud(
-                                serviceId = data.serviceId,
-                                serviceTitle = data.serviceTitle,
-                                providerId = data.providerId,
-                                providerName = data.providerName,
-                                date = fecha,
-                                time = hora,
-                                location = ubicacion,
-                                urgency = urgencia,
-                                details = detalles
+                    Column {
+                        Text("Urgencia", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                        Box {
+                            OutlinedTextField(
+                                value = urgencia,
+                                onValueChange = {},
+                                readOnly = true,
+                                modifier = Modifier.fillMaxWidth().clickable { showUrgencyMenu = true },
+                                enabled = false,
+                                trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null) },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.Black, disabledBorderColor = Color.LightGray)
                             )
-                        },
-                        enabled = isFormValid,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF0047FF),
-                            disabledContainerColor = Color(0xFFE0E0E0),
-                            disabledContentColor = Color(0xFF424242)
-                        ),
-                        shape = RoundedCornerShape(28.dp)
-                    ) {
-                        if (uiState is SolicitarUiState.Loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                        } else {
-                            Icon(Icons.AutoMirrored.Filled.Send, null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Enviar solicitud", fontWeight = FontWeight.Bold)
+                            DropdownMenu(expanded = showUrgencyMenu, onDismissRequest = { showUrgencyMenu = false }) {
+                                listOf("Baja prioridad", "Prioridad normal", "Urgente").forEach { option ->
+                                    DropdownMenuItem(text = { Text(option) }, onClick = { urgencia = option; showUrgencyMenu = false })
+                                }
+                            }
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Al enviar, aceptas compartir tus datos con el proveedor", fontSize = 10.sp, color = Color.Gray)
+
+                    Column {
+                        Text("Más detalles", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                        OutlinedTextField(
+                            value = detalles,
+                            onValueChange = { if (it.length <= 500) detalles = it },
+                            modifier = Modifier.fillMaxWidth().height(100.dp),
+                            placeholder = { Text("Ej: Necesito que traiga sus propias herramientas...", color = Color.Gray) },
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
                 }
+
+                Button(
+                    onClick = {
+                        viewModel.enviarSolicitud(
+                            serviceId = data.serviceId, serviceTitle = data.serviceTitle,
+                            providerId = data.providerId, providerName = data.providerName,
+                            offeredPrice = offeredPrice.toDoubleOrNull() ?: 0.0,
+                            date = fecha, time = hora, location = ubicacion,
+                            urgency = urgencia, details = detalles
+                        )
+                    },
+                    enabled = isFormValid,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(28.dp)
+                ) {
+                    if (uiState is SolicitarUiState.Loading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    } else {
+                        Text("Enviar solicitud", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.navigationBarsPadding())
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

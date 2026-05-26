@@ -34,15 +34,17 @@ fun MisTrabajosScreen(
     val trabajosCompletados = recibidas.filter { it.status == RequestStatus.COMPLETADA }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Historial de Trabajos", fontWeight = FontWeight.Bold) },
+                title = { Text("Historial de Trabajos", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
+                windowInsets = WindowInsets.statusBars // Edge-to-Edge: Barra de estado
             )
         }
     ) { paddingValues ->
@@ -52,9 +54,6 @@ fun MisTrabajosScreen(
                 .padding(paddingValues)
                 .background(Color(0xFFF8F9FA))
         ) {
-            // Resumen de impacto
-            SummaryCard(trabajosCompletados.size)
-
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -70,9 +69,17 @@ fun MisTrabajosScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, 
+                        top = 8.dp, 
+                        end = 16.dp, 
+                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    item {
+                        SummaryCard(trabajosCompletados.size)
+                    }
                     items(trabajosCompletados) { trabajo ->
                         TrabajoCompletadoItem(trabajo)
                     }
@@ -87,7 +94,7 @@ fun SummaryCard(count: Int) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(vertical = 8.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -99,7 +106,8 @@ fun SummaryCard(count: Int) {
                 Text(
                     text = "Tu trayectoria",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Has completado $count servicios con éxito",
@@ -121,7 +129,7 @@ fun TrabajoCompletadoItem(trabajo: ServiceRequest) {
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -132,7 +140,8 @@ fun TrabajoCompletadoItem(trabajo: ServiceRequest) {
                 Text(
                     text = trabajo.serviceTitle,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
                 StatusBadge(status = trabajo.status)
             }
@@ -141,7 +150,6 @@ fun TrabajoCompletadoItem(trabajo: ServiceRequest) {
             
             Text(text = "Cliente: ${trabajo.customerName}", fontWeight = FontWeight.Medium, fontSize = 14.sp)
             Text(text = "Finalizado el: ${trabajo.date}", color = Color.Gray, fontSize = 12.sp)
-            Text(text = "Ubicación: ${trabajo.location}", color = Color.Gray, fontSize = 12.sp)
             
             if (trabajo.details.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))

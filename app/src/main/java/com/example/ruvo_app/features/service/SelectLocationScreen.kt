@@ -10,8 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -48,7 +46,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectLocationScreen(
-    onLocationSelected: (Double, Double, String, String, String, String, String) -> Unit, // lat, lng, full, country, region, city, exact
+    onLocationSelected: (Double, Double, String, String, String, String, String) -> Unit, 
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -58,7 +56,6 @@ fun SelectLocationScreen(
     var selectedLatLng by remember { mutableStateOf(LatLng(4.6243, -74.0636)) } 
     var addressText by remember { mutableStateOf("Localizando...") }
     
-    // Detailed location data
     var currentCountry by remember { mutableStateOf("") }
     var currentRegion by remember { mutableStateOf("") }
     var currentCity by remember { mutableStateOf("") }
@@ -166,38 +163,54 @@ fun SelectLocationScreen(
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
-            Column(modifier = Modifier.background(Color.White)) {
-                CenterAlignedTopAppBar(
-                    title = { Text("Ubicación del Servicio", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                        }
-                    }
-                )
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Busca una dirección o ciudad...") },
-                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, null) }
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { searchAddress(searchQuery) }),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
+            Surface(
+                color = Color.White,
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    CenterAlignedTopAppBar(
+                        title = { Text("Ubicación del Servicio", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                        navigationIcon = {
+                            IconButton(onClick = onBackClick) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                            }
+                        },
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
+                    )
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        placeholder = { Text("Busca una dirección o ciudad...", color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, null) }
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { searchAddress(searchQuery) }),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFFF8F9FA),
+                            unfocusedContainerColor = Color(0xFFF8F9FA)
+                        )
+                    )
+                }
             }
         },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.navigationBarsPadding(), // Respeta la barra gestual
+                horizontalAlignment = Alignment.End, 
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 FloatingActionButton(
                     onClick = { moveToCurrentLocation() },
                     containerColor = Color.White,
@@ -223,9 +236,14 @@ fun SelectLocationScreen(
                     text = { Text("Confirmar punto") }
                 )
             }
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        },
+        contentWindowInsets = WindowInsets(0.dp)
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues) // Aquí aplicamos el padding del Scaffold (TopAppBar)
+        ) {
             AndroidView(
                 factory = { ctx ->
                     MapLibre.getInstance(ctx)
@@ -251,31 +269,32 @@ fun SelectLocationScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Marcador visual central (Pin de RUVO)
+            // Marcador visual central (Pin)
             Icon(
                 imageVector = Icons.Default.LocationOn,
                 contentDescription = null,
-                tint = Color(0xFF0047FF),
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .size(48.dp)
                     .align(Alignment.Center)
                     .offset(y = (-24).dp)
             )
 
-            // Badge de información de dirección
+            // Badge de información de dirección (con padding inferior para insets)
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
                     .align(Alignment.BottomStart)
-                    .offset(y = (-80).dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 100.dp) // Offset para quedar sobre los botones
+                    .navigationBarsPadding(), 
                 shape = RoundedCornerShape(12.dp),
                 color = Color.White.copy(alpha = 0.95f),
                 shadowElevation = 6.dp,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
             ) {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, null, tint = Color(0xFF0047FF), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = addressText, 

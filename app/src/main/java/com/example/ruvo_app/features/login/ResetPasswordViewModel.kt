@@ -32,17 +32,17 @@ class ResetPasswordViewModel : ViewModel() {
         val state = _uiState.value
         
         if (state.newPassword.isBlank() || state.confirmPassword.isBlank()) {
-            _uiState.update { it.copy(error = "Por favor, completa todos los campos") }
+            _uiState.update { it.copy(error = "error_required_fields") }
             return
         }
 
         if (state.newPassword != state.confirmPassword) {
-            _uiState.update { it.copy(error = "Las contraseñas no coinciden") }
+            _uiState.update { it.copy(error = "error_passwords_dont_match") }
             return
         }
 
         if (!state.hasMinLength || !state.hasUpperCase || !state.hasLowerCase || !state.hasNumberOrSymbol) {
-            _uiState.update { it.copy(error = "La contraseña no cumple con todos los requisitos") }
+            _uiState.update { it.copy(error = "error_password_requirements") }
             return
         }
 

@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,24 +44,31 @@ fun NotificationsScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
     ) {
-        // Header
-        Text(
-            text = stringResource(R.string.notifications_title),
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 16.dp),
-            textAlign = TextAlign.Center
-        )
+        // Header con statusBarsPadding para Edge-to-Edge
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White,
+            shadowElevation = 1.dp
+        ) {
+            Text(
+                text = stringResource(R.string.notifications_title),
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(vertical = 16.dp),
+                textAlign = TextAlign.Center
+            )
+        }
 
         // Sub-header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -102,8 +109,7 @@ fun NotificationsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(thickness = 1.dp, color = Color.LightGray.copy(alpha = 0.5f))
+        HorizontalDivider(thickness = 1.dp, color = Color.LightGray.copy(alpha = 0.3f))
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -119,10 +125,13 @@ fun NotificationsScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp, 
+                    top = 8.dp, 
+                    end = 16.dp, 
+                    bottom = 16.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(notifications, key = { it.id }) { notification ->
@@ -158,16 +167,6 @@ fun NotificationsScreen(
                         )
                     }
                 }
-                
-                item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Outlined.KeyboardArrowUp,
-                            contentDescription = null,
-                            tint = Color.Gray
-                        )
-                    }
-                }
             }
         }
     }
@@ -175,11 +174,13 @@ fun NotificationsScreen(
 
 @Composable
 fun NotificationItem(notification: Notification, onClick: () -> Unit) {
+    val context = LocalContext.current
     val icon = when (notification.type) {
         NotificationType.NUEVA_PUBLICACION_ZONA -> Icons.Outlined.Notifications
         NotificationType.NUEVO_COMENTARIO -> Icons.Outlined.ChatBubbleOutline
         NotificationType.ESTADO_ACTUALIZADO -> Icons.Outlined.TaskAlt
         NotificationType.LOGRO_DESBLOQUEADO -> Icons.Outlined.EmojiEvents
+        NotificationType.NUEVA_SOLICITUD -> Icons.Outlined.AssignmentTurnedIn
     }
 
     val iconBackground = when (notification.type) {
@@ -187,11 +188,22 @@ fun NotificationItem(notification: Notification, onClick: () -> Unit) {
         NotificationType.NUEVO_COMENTARIO -> Color(0xFFE8F5E9)
         NotificationType.ESTADO_ACTUALIZADO -> Color(0xFFE3F2FD)
         NotificationType.LOGRO_DESBLOQUEADO -> Color(0xFFFFF3E0)
+        NotificationType.NUEVA_SOLICITUD -> Color(0xFFF3E5F5)
     }
 
     val timeStr = remember(notification.timestamp) {
         val sdf = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
         sdf.format(Date(notification.timestamp))
+    }
+
+    // Resolve localized message
+    val displayedMessage = remember(notification.message, notification.messageArgs) {
+        val resId = context.resources.getIdentifier(notification.message, "string", context.packageName)
+        if (resId != 0) {
+            context.getString(resId, *notification.messageArgs.toTypedArray())
+        } else {
+            notification.message
+        }
     }
 
     Card(
@@ -233,13 +245,13 @@ fun NotificationItem(notification: Notification, onClick: () -> Unit) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = notification.message,
+                    text = displayedMessage,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
                         fontSize = 14.sp
                     ),
                     color = Color.Black,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(

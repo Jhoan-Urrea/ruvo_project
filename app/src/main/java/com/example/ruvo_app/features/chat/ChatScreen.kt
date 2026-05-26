@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -31,7 +30,6 @@ import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
 import com.example.ruvo_app.domain.model.ChatMessage
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -46,27 +44,26 @@ fun ChatScreen(
     val messages by viewModel.messages.collectAsState()
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(chatData.providerId) {
         viewModel.loadMessages(chatData.providerId)
     }
 
-    // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size)
+            listState.animateScrollToItem(messages.size - 1)
         }
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(36.dp)
                                 .clip(CircleShape)
                                 .background(Color.LightGray),
                             contentAlignment = Alignment.Center
@@ -89,21 +86,14 @@ fun ChatScreen(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = chatData.providerName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = chatData.providerSpecialty,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
-                                )
-                            }
                             Text(
-                                text = "En linea",
+                                text = chatData.providerName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "En línea",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF2ECC71)
                             )
@@ -120,7 +110,8 @@ fun ChatScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "Más")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
+                windowInsets = WindowInsets.statusBars
             )
         },
         bottomBar = {
@@ -131,15 +122,13 @@ fun ChatScreen(
                     if (messageText.isNotBlank()) {
                         viewModel.sendMessage(chatData.providerId, messageText)
                         messageText = ""
-                        coroutineScope.launch {
-                            listState.animateScrollToItem(messages.size)
-                        }
                     }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp) // Edge-to-Edge: Control manual
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -147,9 +136,7 @@ fun ChatScreen(
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -163,15 +150,13 @@ fun ChatScreen(
                 }
 
                 itemsIndexed(messages) { index, message ->
-                    // Show date header if it's the first message or date changed
                     if (shouldShowDateHeader(index, messages)) {
                         DateHeader(timestamp = message.timestamp)
                     }
 
                     ChatBubble(
                         message = message,
-                        isFromMe = message.senderId == currentUserId,
-                        showAvatar = shouldShowAvatar(index, messages, currentUserId)
+                        isFromMe = message.senderId == currentUserId
                     )
                 }
             }
@@ -186,13 +171,6 @@ private fun shouldShowDateHeader(index: Int, messages: List<ChatMessage>): Boole
     
     return currentMsgDate.get(Calendar.DAY_OF_YEAR) != prevMsgDate.get(Calendar.DAY_OF_YEAR) ||
            currentMsgDate.get(Calendar.YEAR) != prevMsgDate.get(Calendar.YEAR)
-}
-
-private fun shouldShowAvatar(index: Int, messages: List<ChatMessage>, currentUserId: String): Boolean {
-    // Show avatar only for the last message in a group from the other user
-    if (messages[index].senderId == currentUserId) return false
-    if (index == messages.size - 1) return true
-    return messages[index + 1].senderId != messages[index].senderId
 }
 
 @Composable
@@ -268,8 +246,7 @@ fun ServiceContextCard(title: String, description: String) {
 @Composable
 fun ChatBubble(
     message: ChatMessage,
-    isFromMe: Boolean,
-    showAvatar: Boolean = false
+    isFromMe: Boolean
 ) {
     val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
     val time = sdf.format(Date(message.timestamp))
@@ -279,13 +256,6 @@ fun ChatBubble(
         horizontalArrangement = if (isFromMe) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom
     ) {
-        if (!isFromMe && showAvatar) {
-            // Space for avatar or placeholder can be added here
-            Spacer(modifier = Modifier.width(4.dp))
-        } else if (!isFromMe) {
-            Spacer(modifier = Modifier.width(4.dp))
-        }
-
         Surface(
             shape = RoundedCornerShape(
                 topStart = 16.dp,
@@ -293,8 +263,8 @@ fun ChatBubble(
                 bottomStart = if (isFromMe) 16.dp else 4.dp,
                 bottomEnd = if (isFromMe) 4.dp else 16.dp
             ),
-            color = if (isFromMe) Color(0xFF0047FF) else Color.White,
-            shadowElevation = 1.dp,
+            color = if (isFromMe) MaterialTheme.colorScheme.primary else Color.White,
+            shadowElevation = 0.5.dp,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -344,7 +314,7 @@ fun ChatInputBar(
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -353,8 +323,8 @@ fun ChatInputBar(
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 48.dp),
-                placeholder = { Text("Escribe tu mensaje", color = Color.Gray) },
+                    .heightIn(min = 48.dp, max = 120.dp),
+                placeholder = { Text("Escribe tu mensaje", color = Color.Gray, fontSize = 14.sp) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color(0xFFF5F5F5),
                     unfocusedContainerColor = Color(0xFFF5F5F5),
@@ -363,12 +333,16 @@ fun ChatInputBar(
                 ),
                 shape = RoundedCornerShape(24.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             IconButton(
                 onClick = onSend,
+                enabled = value.isNotBlank(),
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Color(0xFF0047FF), CircleShape)
+                    .background(
+                        if (value.isNotBlank()) MaterialTheme.colorScheme.primary else Color.LightGray,
+                        CircleShape
+                    )
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Color.White)
             }

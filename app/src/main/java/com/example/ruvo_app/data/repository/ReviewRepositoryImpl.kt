@@ -27,18 +27,33 @@ class ReviewRepositoryImpl @Inject constructor(
                 // 1. Save the review
                 transaction.set(docRef, reviewWithId)
                 
-                // 2. Update provider reputation
+                // 2. Update provider reputation (Overall)
                 val providerRef = firestore.collection("users").document(review.providerId)
                 val providerSnap = transaction.get(providerRef)
                 
-                val currentRating = providerSnap.getDouble("rating") ?: 0.0
-                val totalReviews = providerSnap.getLong("totalReviews") ?: 0L
+                val currentProviderRating = providerSnap.getDouble("rating") ?: 0.0
+                val totalProviderReviews = providerSnap.getLong("totalReviews") ?: 0L
                 
-                val newTotalReviews = totalReviews + 1
-                val newRating = ((currentRating * totalReviews) + review.rating) / newTotalReviews
+                val newTotalProviderReviews = totalProviderReviews + 1
+                val newProviderRating = ((currentProviderRating * totalProviderReviews) + review.rating) / newTotalProviderReviews
                 
-                transaction.update(providerRef, "rating", newRating)
-                transaction.update(providerRef, "totalReviews", newTotalReviews)
+                transaction.update(providerRef, "rating", newProviderRating)
+                transaction.update(providerRef, "totalReviews", newTotalProviderReviews)
+                
+                // 3. Update specific Service Post rating
+                val serviceRef = firestore.collection("services_posts").document(review.serviceId)
+                val serviceSnap = transaction.get(serviceRef)
+                
+                if (serviceSnap.exists()) {
+                    val currentServiceRating = serviceSnap.getDouble("rating") ?: 0.0
+                    val totalServiceReviews = serviceSnap.getLong("reviewsCount") ?: 0L
+                    
+                    val newTotalServiceReviews = totalServiceReviews + 1
+                    val newServiceRating = ((currentServiceRating * totalServiceReviews) + review.rating) / newTotalServiceReviews
+                    
+                    transaction.update(serviceRef, "rating", newServiceRating)
+                    transaction.update(serviceRef, "reviewsCount", newTotalServiceReviews)
+                }
                 
             }.await()
             

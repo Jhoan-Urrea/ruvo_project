@@ -71,6 +71,7 @@ data class NotificationDto(
     val receiverId: String = "",
     val type: String = "ESTADO_ACTUALIZADO",
     val message: String = "",
+    val messageArgs: List<String> = emptyList(),
     val timestamp: Long = 0L,
     val isRead: Boolean = false
 ) {
@@ -79,6 +80,7 @@ data class NotificationDto(
         receiverId = receiverId,
         type = try { NotificationType.valueOf(type) } catch(e: Exception) { NotificationType.ESTADO_ACTUALIZADO },
         message = message,
+        messageArgs = messageArgs,
         timestamp = timestamp,
         isRead = isRead
     )
@@ -88,6 +90,7 @@ data class NotificationDto(
             receiverId = n.receiverId,
             type = n.type.name,
             message = n.message,
+            messageArgs = n.messageArgs,
             timestamp = n.timestamp,
             isRead = n.isRead
         )

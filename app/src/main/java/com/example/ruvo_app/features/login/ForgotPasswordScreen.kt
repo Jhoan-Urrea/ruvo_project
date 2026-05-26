@@ -3,9 +3,11 @@ package com.example.ruvo_app.features.login
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Email
@@ -33,8 +35,10 @@ fun ForgotPasswordScreen(
     viewModel: ForgotPasswordViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             Column {
                 TopAppBar(
@@ -46,7 +50,7 @@ fun ForgotPasswordScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 ),
-                                modifier = Modifier.padding(end = 48.dp) // Offset for back button to center title
+                                modifier = Modifier.padding(end = 48.dp)
                             )
                         }
                     },
@@ -61,17 +65,21 @@ fun ForgotPasswordScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.White
-                    )
+                    ),
+                    windowInsets = WindowInsets.statusBars
                 )
                 HorizontalDivider(color = Color(0xFFF1F3F4))
             }
         },
-        containerColor = Color.White
+        containerColor = Color.White,
+        contentWindowInsets = WindowInsets(0.dp) // Edge-to-Edge: Desactivamos insets automáticos
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues) // Solo considera el TopAppBar
+                .imePadding() 
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -179,7 +187,7 @@ fun ForgotPasswordScreen(
                 enabled = !uiState.isLoading
             ) {
                 if (uiState.isLoading) {
-                    CircularProgressIndicator(size = 24.dp, color = Color.White)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
                     Text(
                         text = "Enviar enlace de recuperación",
@@ -237,7 +245,7 @@ fun ForgotPasswordScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(40.dp))
 
             // Sección Inferior
             Text(
@@ -252,21 +260,21 @@ fun ForgotPasswordScreen(
                 onClick = onBackClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(bottom = 16.dp),
+                    .height(56.dp),
                 shape = RoundedCornerShape(28.dp),
-                border = BorderStroke(1.dp, Color.LightGray)
+                border = BorderStroke(1.dp, Color.LightGray),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
             ) {
                 Text(
                     text = "Volver al inicio de sesión",
-                    color = Color.Black,
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold
                     )
                 )
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.navigationBarsPadding()) // Margen para barra de navegación
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         if (uiState.isEmailSent) {
@@ -282,15 +290,6 @@ fun ForgotPasswordScreen(
             )
         }
     }
-}
-
-@Composable
-fun CircularProgressIndicator(size: androidx.compose.ui.unit.Dp, color: Color) {
-    androidx.compose.material3.CircularProgressIndicator(
-        modifier = Modifier.size(size),
-        color = color,
-        strokeWidth = 2.dp
-    )
 }
 
 @Preview(showBackground = true)

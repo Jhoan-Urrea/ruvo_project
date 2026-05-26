@@ -17,7 +17,7 @@ class ServiceRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ServiceRepository {
 
-    override suspend fun saveServicePost(post: ServicePost): Result<Unit> {
+    override suspend fun saveServicePost(post: ServicePost): Result<String> {
         return try {
             val docRef = if (post.id.isEmpty()) {
                 firestore.collection("services_posts").document()
@@ -28,7 +28,7 @@ class ServiceRepositoryImpl @Inject constructor(
             val postWithId = if (post.id.isEmpty()) post.copy(id = docRef.id) else post
             
             docRef.set(ServicePostDto.fromDomain(postWithId)).await()
-            Result.success(Unit)
+            Result.success(docRef.id)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -85,10 +85,66 @@ class ServiceRepositoryImpl @Inject constructor(
         awaitClose { subscription.remove() }
     }
 
+    override fun getServicePostById(postId: String): Flow<ServicePost?> = callbackFlow {
+        val subscription = firestore.collection("services_posts").document(postId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val post = snapshot?.toObject(ServicePostDto::class.java)?.toDomain(snapshot.id)
+                trySend(post)
+            }
+        awaitClose { subscription.remove() }
+    }
+
     override suspend fun updatePostStatus(postId: String, newStatus: PostStatus): Result<Unit> {
         return try {
             firestore.collection("services_posts").document(postId)
                 .update("status", newStatus.name)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateTrustAnalysis(
+        postId: String, 
+        score: Double, 
+        textScore: Int,
+        imageScore: Int,
+        analysis: String, 
+        details: Map<String, String>,
+        aiConfidence: Double,
+        riskHighlights: List<String>,
+        newStatus: PostStatus
+    ): Result<Unit> {
+        return try {
+            firestore.collection("services_posts").document(postId)
+                .update(
+                    mapOf(
+                        "trustScore" to score,
+                        "trustTextScore" to textScore,
+                        "trustImageScore" to imageScore,
+                        "trustAnalysis" to analysis,
+                        "trustDetails" to details,
+                        "aiConfidence" to aiConfidence,
+                        "riskHighlights" to riskHighlights,
+                        "status" to newStatus.name
+                    )
+                )
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun setAiFeedback(postId: String, isUseful: Boolean): Result<Unit> {
+        return try {
+            firestore.collection("services_posts").document(postId)
+                .update("aiFeedbackUseful", isUseful)
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -101,7 +157,6 @@ class ServiceRepositoryImpl @Inject constructor(
     }
 
     override suspend fun reactivateService(postId: String): Result<Unit> {
-        // Al reactivar, vuelve a PENDIENTE para revisión de seguridad/calidad
         return updatePostStatus(postId, PostStatus.PENDIENTE)
     }
 
@@ -160,6 +215,8 @@ class ServiceRepositoryImpl @Inject constructor(
 data class ServicePostDto(
     val id: String = "",
     val authorId: String = "",
+    val authorName: String = "",
+    val authorProfilePictureUrl: String? = null,
     val title: String = "",
     val category: String = "HOGAR",
     val description: String = "",
@@ -176,14 +233,26 @@ data class ServicePostDto(
     val maxPrice: Double = 0.0,
     val status: String = "PENDIENTE",
     val rejectionReason: String? = null,
+    val trustScore: Double = 0.0,
+    val trustTextScore: Int = 0,
+    val trustImageScore: Int = 0,
+    val trustAnalysis: String? = null,
+    val trustDetails: Map<String, String> = emptyMap(),
+    val aiConfidence: Double = 0.0,
+    val riskHighlights: List<String> = emptyList(),
+    val aiFeedbackUseful: Boolean? = null,
     val importantCount: Int = 0,
     val likedBy: List<String> = emptyList(),
     val isFeatured: Boolean = false,
+    val rating: Double = 0.0,
+    val reviewsCount: Int = 0,
     val createdAt: Long = 0L
 ) {
     fun toDomain(id: String) = ServicePost(
         id = id,
         authorId = authorId,
+        authorName = authorName,
+        authorProfilePictureUrl = authorProfilePictureUrl,
         title = title,
         category = try { ServiceCategory.valueOf(category) } catch(e: Exception) { ServiceCategory.HOGAR },
         description = description,
@@ -199,15 +268,27 @@ data class ServicePostDto(
         maxPrice = maxPrice,
         status = try { PostStatus.valueOf(status) } catch(e: Exception) { PostStatus.PENDIENTE },
         rejectionReason = rejectionReason,
+        trustScore = trustScore,
+        trustTextScore = trustTextScore,
+        trustImageScore = trustImageScore,
+        trustAnalysis = trustAnalysis,
+        trustDetails = trustDetails,
+        aiConfidence = aiConfidence,
+        riskHighlights = riskHighlights,
+        aiFeedbackUseful = aiFeedbackUseful,
         importantCount = importantCount,
         likedBy = likedBy,
         isFeatured = isFeatured,
+        rating = rating.toFloat(),
+        reviewsCount = reviewsCount,
         createdAt = if (createdAt == 0L) System.currentTimeMillis() else createdAt
     )
 
     companion object {
         fun fromDomain(post: ServicePost) = ServicePostDto(
             authorId = post.authorId,
+            authorName = post.authorName,
+            authorProfilePictureUrl = post.authorProfilePictureUrl,
             title = post.title,
             category = post.category.name,
             description = post.description,
@@ -224,21 +305,20 @@ data class ServicePostDto(
             maxPrice = post.maxPrice,
             status = post.status.name,
             rejectionReason = post.rejectionReason,
+            trustScore = post.trustScore,
+            trustTextScore = post.trustTextScore,
+            trustImageScore = post.trustImageScore,
+            trustAnalysis = post.trustAnalysis,
+            trustDetails = post.trustDetails,
+            aiConfidence = post.aiConfidence,
+            riskHighlights = post.riskHighlights,
+            aiFeedbackUseful = post.aiFeedbackUseful,
             importantCount = post.importantCount,
             likedBy = post.likedBy,
             isFeatured = post.isFeatured,
+            rating = post.rating.toDouble(),
+            reviewsCount = post.reviewsCount,
             createdAt = post.createdAt
         )
-    }
-}
-
-data class ImageResourceDto(
-    val url: String = "",
-    val publicId: String = "",
-    val isPrimary: Boolean = false
-) {
-    fun toDomain() = ImageResource(url, publicId, isPrimary)
-    companion object {
-        fun fromDomain(res: ImageResource) = ImageResourceDto(res.url, res.publicId, res.isPrimary)
     }
 }

@@ -10,7 +10,6 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -49,25 +48,25 @@ class EditProfileViewModel @Inject constructor(
     }
 
     fun onFullNameChanged(name: String) {
-        _uiState.update { it.copy(fullName = name) }
+        _uiState.update { it.copy(fullName = name, error = null) }
     }
 
     fun onPhoneChanged(phone: String) {
-        _uiState.update { it.copy(phone = phone) }
+        _uiState.update { it.copy(phone = phone, error = null) }
     }
 
     fun onCityChanged(city: String) {
-        _uiState.update { it.copy(city = city) }
+        _uiState.update { it.copy(city = city, error = null) }
     }
 
     fun onImageSelected(uri: Uri) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isUploadingImage = true) }
+            _uiState.update { it.copy(isUploadingImage = true, error = null) }
             val result = storageService.uploadImage(uri)
             result.onSuccess { resource ->
                 _uiState.update { it.copy(profilePictureUrl = resource.url, isUploadingImage = false) }
             }.onFailure { e ->
-                _uiState.update { it.copy(error = "Fallo al cargar imagen: ${e.message}", isUploadingImage = false) }
+                _uiState.update { it.copy(error = "error_upload_failed", isUploadingImage = false) }
             }
         }
     }
@@ -77,7 +76,7 @@ class EditProfileViewModel @Inject constructor(
         val uid = auth.currentUser?.uid ?: return
 
         if (state.fullName.isBlank() || state.phone.isBlank() || state.city.isBlank()) {
-            _uiState.update { it.copy(error = "Por favor, completa todos los campos") }
+            _uiState.update { it.copy(error = "error_required_fields") }
             return
         }
 
@@ -95,7 +94,7 @@ class EditProfileViewModel @Inject constructor(
             result.onSuccess {
                 onSuccess()
             }.onFailure { e ->
-                _uiState.update { it.copy(error = e.message ?: "Error al actualizar perfil") }
+                _uiState.update { it.copy(error = e.message ?: "error_unknown") }
             }
         }
     }

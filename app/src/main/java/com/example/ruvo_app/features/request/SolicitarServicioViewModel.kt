@@ -2,7 +2,12 @@ package com.example.ruvo_app.features.request
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ruvo_app.R
+import com.example.ruvo_app.core.utils.UiText
+import com.example.ruvo_app.domain.model.Notification
+import com.example.ruvo_app.domain.model.NotificationType
 import com.example.ruvo_app.domain.model.ServiceRequest
+import com.example.ruvo_app.domain.repository.NotificationRepository
 import com.example.ruvo_app.domain.repository.ServiceRequestRepository
 import com.example.ruvo_app.domain.repository.UserRepository
 import com.example.ruvo_app.domain.service.Achievement
@@ -19,6 +24,7 @@ import javax.inject.Inject
 class SolicitarServicioViewModel @Inject constructor(
     private val repository: ServiceRequestRepository,
     private val userRepository: UserRepository,
+    private val notificationRepository: NotificationRepository,
     private val gamificationService: GamificationService,
     private val auth: FirebaseAuth
 ) : ViewModel() {
@@ -31,6 +37,7 @@ class SolicitarServicioViewModel @Inject constructor(
         serviceTitle: String,
         providerId: String,
         providerName: String,
+        offeredPrice: Double,
         date: String,
         time: String,
         location: String,
@@ -39,12 +46,16 @@ class SolicitarServicioViewModel @Inject constructor(
     ) {
         val userId = auth.currentUser?.uid ?: return
         
+        if (date.isBlank() || time.isBlank() || details.length < 5) {
+            _uiState.value = SolicitarUiState.Error(UiText.StringResource(R.string.error_form_invalid))
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = SolicitarUiState.Loading
             
-            // Obtenemos el nombre del cliente actual
             val userProfileResult = userRepository.getUserProfile(userId).first()
-            val customerName = userProfileResult.getOrNull()?.fullName ?: "Usuario"
+            val customerName = userProfileResult.getOrNull()?.fullName ?: "Un cliente"
 
             val request = ServiceRequest(
                 serviceId = serviceId,
@@ -53,6 +64,7 @@ class SolicitarServicioViewModel @Inject constructor(
                 customerName = customerName,
                 providerId = providerId,
                 providerName = providerName,
+                offeredPrice = offeredPrice,
                 date = date,
                 time = time,
                 location = location,
@@ -62,14 +74,25 @@ class SolicitarServicioViewModel @Inject constructor(
 
             val result = repository.createRequest(request)
             if (result.isSuccess) {
-                // GAMIFICACIÓN: Logro Explorador
+                // NOTIFICACIÓN DIRECTA AL PROVEEDOR
+                notificationRepository.sendNotification(
+                    Notification(
+                        receiverId = providerId,
+                        type = NotificationType.NUEVA_SOLICITUD,
+                        message = "$customerName ha solicitado tu servicio '$serviceTitle'."
+                    )
+                )
+                
                 gamificationService.checkAndAwardAchievement(userId, Achievement.Explorador)
-
                 _uiState.value = SolicitarUiState.Success
             } else {
-                _uiState.value = SolicitarUiState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
+                _uiState.value = SolicitarUiState.Error(UiText.DynamicString("No se pudo enviar la solicitud"))
             }
         }
+    }
+    
+    fun resetState() {
+        _uiState.value = SolicitarUiState.Idle
     }
 }
 
@@ -77,5 +100,5 @@ sealed class SolicitarUiState {
     object Idle : SolicitarUiState()
     object Loading : SolicitarUiState()
     object Success : SolicitarUiState()
-    data class Error(val message: String) : SolicitarUiState()
+    data class Error(val message: UiText) : SolicitarUiState()
 }

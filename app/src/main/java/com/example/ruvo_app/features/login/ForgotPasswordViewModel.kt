@@ -27,7 +27,7 @@ class ForgotPasswordViewModel @Inject constructor(
     fun onResetPasswordClicked(onSuccess: () -> Unit) {
         val email = _uiState.value.email
         if (email.isBlank()) {
-            _uiState.update { it.copy(error = "Por favor, ingresa tu correo electrónico") }
+            _uiState.update { it.copy(error = "error_required_fields") }
             return
         }
 
@@ -40,7 +40,7 @@ class ForgotPasswordViewModel @Inject constructor(
                 _uiState.update { it.copy(isEmailSent = true) }
                 onSuccess()
             }.onFailure { e ->
-                _uiState.update { it.copy(error = e.message ?: "Error al enviar el correo") }
+                _uiState.update { it.copy(error = e.message ?: "error_unknown") }
             }
         }
     }

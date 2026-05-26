@@ -25,6 +25,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.core.component.StarRatingBar
 import com.example.ruvo_app.domain.model.RequestStatus
 import com.example.ruvo_app.domain.model.ServiceRequest
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +47,7 @@ fun MisSolicitudesScreen(
         CalificarServiceDialog(
             request = showReviewDialog!!,
             onDismiss = { showReviewDialog = null },
-            onSubmit = { rating, comment ->
+            onSubmit = { rating: Int, comment: String ->
                 viewModel.calificarServicio(showReviewDialog!!, rating, comment)
                 showReviewDialog = null
             }
@@ -53,46 +55,55 @@ fun MisSolicitudesScreen(
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text("Mis Solicitudes", fontWeight = FontWeight.Bold) },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-                )
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = Color.White,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    indicator = { tabPositions ->
-                        if (selectedTab < tabPositions.size) {
-                            TabRowDefaults.SecondaryIndicator(
-                                Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                color = MaterialTheme.colorScheme.primary
+            Surface(
+                color = Color.White,
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.statusBarsPadding()) { 
+                    TopAppBar(
+                        title = { Text("Mis Solicitudes", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+                        navigationIcon = {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                    )
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = Color.White,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        indicator = { tabPositions ->
+                            if (selectedTab < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        divider = {}
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                text = { 
+                                    Text(
+                                        text = title,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                                    ) 
+                                }
                             )
                         }
                     }
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = { 
-                                Text(
-                                    text = title,
-                                    fontSize = 14.sp,
-                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-                                ) 
-                            }
-                        )
-                    }
                 }
             }
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -110,10 +121,15 @@ fun MisSolicitudesScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp, 
+                            top = 16.dp, 
+                            end = 16.dp, 
+                            bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        items(currentList) { solicitud ->
+                        items(currentList, key = { it.id }) { solicitud ->
                             SolicitudItem(
                                 solicitud = solicitud,
                                 isProviderView = selectedTab == 1,
@@ -141,58 +157,79 @@ fun SolicitudItem(
     onCancelar: () -> Unit,
     onCalificar: () -> Unit
 ) {
+    val currencyFormat = NumberFormat.getCurrencyInstance(Locale("es", "CO")).apply {
+        maximumFractionDigits = 0
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = solicitud.serviceTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = solicitud.serviceTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = if (isProviderView) "Solicitado por: ${solicitud.customerName}" else "Proveedor: ${solicitud.providerName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
                 StatusBadge(status = solicitud.status)
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
-            Text(
-                text = if (isProviderView) "Cliente: ${solicitud.customerName}" else "Proveedor: ${solicitud.providerName}",
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp
-            )
-            Text(text = "Fecha: ${solicitud.date} a las ${solicitud.time}", color = Color.Gray, fontSize = 12.sp)
+            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
             
-            if (solicitud.details.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    color = Color(0xFFF5F5F5),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Detalles de la solicitud:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = solicitud.details,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.DarkGray
-                        )
-                    }
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text("Presupuesto", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = currencyFormat.format(solicitud.offeredPrice),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 15.sp
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Fecha programada", fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text(text = "${solicitud.date} - ${solicitud.time}", fontWeight = FontWeight.Medium, fontSize = 13.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (solicitud.details.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    color = Color(0xFFF5F7FA),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = solicitud.details,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
 
-            // Acciones según la vista y el estado
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ACCIONES PROMINENTES
             when (solicitud.status) {
                 RequestStatus.PENDIENTE -> {
                     if (isProviderView) {
@@ -202,36 +239,31 @@ fun SolicitudItem(
                         ) {
                             OutlinedButton(
                                 onClick = onRechazar,
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red),
-                                shape = RoundedCornerShape(8.dp)
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE74C3C)),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Rechazar")
+                                Text("Rechazar", fontWeight = FontWeight.Bold)
                             }
                             Button(
                                 onClick = onAceptar,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).height(48.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71)),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Aceptar")
+                                Text("Aceptar", fontWeight = FontWeight.Bold)
                             }
                         }
                     } else {
                         OutlinedButton(
                             onClick = onCancelar,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text("Cancelar Solicitud")
                         }
                     }
@@ -240,13 +272,27 @@ fun SolicitudItem(
                     if (isProviderView) {
                         Button(
                             onClick = onFinalizar,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF)),
-                            shape = RoundedCornerShape(8.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.Check, null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Marcar como completado")
+                            Text("Finalizar Trabajo", fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Surface(
+                            color = Color(0xFFE8F5E9),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "El proveedor ha aceptado. ¡Ponte en contacto pronto!",
+                                modifier = Modifier.padding(12.dp),
+                                color = Color(0xFF2E7D32),
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
@@ -254,9 +300,9 @@ fun SolicitudItem(
                     if (!isProviderView) {
                         Button(
                             onClick = onCalificar,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107), contentColor = Color.Black),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.Star, null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -274,9 +320,14 @@ fun SolicitudItem(
 fun EmptyState(message: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "📭", fontSize = 48.sp)
+            Text(text = "📭", fontSize = 64.sp)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = message, color = Color.Gray, textAlign = TextAlign.Center)
+            Text(
+                text = message, 
+                color = Color.Gray, 
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
         }
     }
 }
@@ -319,7 +370,7 @@ fun CalificarServiceDialog(
         confirmButton = {
             Button(
                 onClick = { onSubmit(rating, comment) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF))
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text("Enviar calificación")
             }
@@ -345,7 +396,7 @@ fun StatusBadge(status: RequestStatus) {
     Surface(
         color = color.copy(alpha = 0.1f),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color)
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
     ) {
         Text(
             text = status.name,

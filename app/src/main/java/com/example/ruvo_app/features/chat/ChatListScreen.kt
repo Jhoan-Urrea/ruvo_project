@@ -33,7 +33,7 @@ import com.example.ruvo_app.core.component.ChatListShimmer
 @Composable
 fun ChatListScreen(
     onBackClick: () -> Unit,
-    onChatClick: (String, String, String, Int, String?) -> Unit, // Updated signature
+    onChatClick: (String, String, String, Int, String?) -> Unit,
     viewModel: ChatListViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -41,17 +41,45 @@ fun ChatListScreen(
     val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Mensajería", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
-            )
-        }
+            Surface(
+                color = Color.White,
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    CenterAlignedTopAppBar(
+                        title = { Text("Mensajería", fontWeight = FontWeight.Bold) },
+                        navigationIcon = {
+                            IconButton(onClick = onBackClick) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                            }
+                        },
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
+                    )
+                    // Barra de Búsqueda integrada en el header
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        placeholder = { Text("Buscar mensajes...", color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color(0xFFF0F0F0),
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedContainerColor = Color(0xFFF8F9FA),
+                            focusedContainerColor = Color(0xFFF8F9FA)
+                        )
+                    )
+                }
+            }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -59,25 +87,6 @@ fun ChatListScreen(
                 .padding(paddingValues)
                 .background(Color.White)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                placeholder = { Text("Buscar mensajes...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color(0xFFF0F0F0),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedContainerColor = Color(0xFFF8F9FA),
-                    focusedContainerColor = Color(0xFFF8F9FA)
-                )
-            )
-
             if (isLoading) {
                 ChatListShimmer()
             } else if (chats.isEmpty()) {
@@ -96,7 +105,9 @@ fun ChatListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+                    contentPadding = PaddingValues(
+                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    )
                 ) {
                     val filteredChats = chats.filter { it.userName.contains(searchQuery, ignoreCase = true) }
                     items(filteredChats) { chat ->
@@ -124,7 +135,6 @@ fun ChatItem(chat: ChatPreview, onClick: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar with online status indicator
             Box(modifier = Modifier.size(56.dp)) {
                 if (chat.imageUrl != null) {
                     AsyncImage(

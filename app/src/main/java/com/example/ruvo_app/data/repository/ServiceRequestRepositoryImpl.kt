@@ -58,6 +58,20 @@ class ServiceRequestRepositoryImpl @Inject constructor(
         awaitClose { subscription.remove() }
     }
 
+    override fun getAllRequests(): Flow<List<ServiceRequest>> = callbackFlow {
+        val subscription = firestore.collection("service_requests")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val requests = snapshot?.documents?.mapNotNull { it.toObject(ServiceRequestDto::class.java)?.toDomain(it.id) } ?: emptyList()
+                trySend(requests)
+            }
+        awaitClose { subscription.remove() }
+    }
+
     override suspend fun updateRequestStatus(requestId: String, status: String): Result<Unit> {
         return try {
             firestore.collection("service_requests").document(requestId)
@@ -78,6 +92,7 @@ data class ServiceRequestDto(
     val customerName: String = "",
     val providerId: String = "",
     val providerName: String = "",
+    val offeredPrice: Double = 0.0,
     val date: String = "",
     val time: String = "",
     val location: String = "",
@@ -94,6 +109,7 @@ data class ServiceRequestDto(
         customerName = customerName,
         providerId = providerId,
         providerName = providerName,
+        offeredPrice = offeredPrice,
         date = date,
         time = time,
         location = location,
@@ -112,6 +128,7 @@ data class ServiceRequestDto(
             customerName = domain.customerName,
             providerId = domain.providerId,
             providerName = domain.providerName,
+            offeredPrice = domain.offeredPrice,
             date = domain.date,
             time = domain.time,
             location = domain.location,

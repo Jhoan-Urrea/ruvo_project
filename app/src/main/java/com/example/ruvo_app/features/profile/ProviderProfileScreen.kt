@@ -16,11 +16,9 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CardMembership
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +36,7 @@ import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
 import com.example.ruvo_app.domain.model.ServicePost
 import com.example.ruvo_app.domain.model.User
+import com.example.ruvo_app.core.component.ReportDialog
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,28 +48,24 @@ fun ProviderProfileScreen(
     viewModel: ProviderProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showReportDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(profileData.providerId) {
         viewModel.loadProviderProfile(profileData.providerId)
     }
 
+    if (showReportDialog) {
+        ReportDialog(
+            onDismiss = { showReportDialog = false },
+            onConfirm = { reason: String, desc: String ->
+                viewModel.reportUser(reason, desc)
+                showReportDialog = false
+            }
+        )
+    }
+
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = "Perfil del proveedor",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
-            )
-        },
+        modifier = Modifier.fillMaxSize(),
         bottomBar = {
             val user = (uiState as? ProviderProfileUiState.Success)?.user
             if (user != null) {
@@ -83,10 +78,11 @@ fun ProviderProfileScreen(
                         onClick = { onContactClick(user) },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .navigationBarsPadding()
                             .padding(16.dp)
                             .height(56.dp),
                         shape = RoundedCornerShape(28.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -94,7 +90,8 @@ fun ProviderProfileScreen(
                     }
                 }
             }
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when (val state = uiState) {
@@ -112,7 +109,9 @@ fun ProviderProfileScreen(
                     ProviderProfileContent(
                         user = state.user,
                         services = state.services,
-                        initialImageRes = profileData.imageRes
+                        initialImageRes = profileData.imageRes,
+                        onBackClick = onBackClick,
+                        onReportClick = { showReportDialog = true }
                     )
                 }
             }
@@ -124,7 +123,9 @@ fun ProviderProfileScreen(
 fun ProviderProfileContent(
     user: User,
     services: List<ServicePost>,
-    initialImageRes: Int
+    initialImageRes: Int,
+    onBackClick: () -> Unit,
+    onReportClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -132,15 +133,40 @@ fun ProviderProfileContent(
             .verticalScroll(rememberScrollState())
             .background(Color(0xFFF8F9FA))
     ) {
-        // Header Azul
+        // Header Azul Inmersivo
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
-                .background(Color(0xFF1A73E8)),
-            contentAlignment = Alignment.Center
+                .background(MaterialTheme.colorScheme.primary)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(bottom = 48.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    }
+                    Text(
+                        text = "Perfil",
+                        style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                    )
+                    IconButton(onClick = onReportClick) {
+                        Icon(Icons.Outlined.Report, contentDescription = "Reportar", tint = Color.White.copy(alpha = 0.8f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Box(
                     modifier = Modifier
                         .size(100.dp)
@@ -173,19 +199,6 @@ fun ProviderProfileContent(
                         fontWeight = FontWeight.Bold
                     )
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = user.role.name,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.LocationOn, null, tint = Color.White, modifier = Modifier.size(14.dp))
@@ -212,99 +225,52 @@ fun ProviderProfileContent(
             }
         }
 
-        // Estadísticas
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .offset(y = (-30).dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    ProviderStatItem(value = "${user.stats.activePosts}", label = "Servicios activos", color = Color(0xFF1A73E8))
-                    ProviderStatItem(value = "${user.stats.finishedPosts}", label = "Completados", color = Color(0xFF2ECC71))
-                    ProviderStatItem(value = "${user.reputation.points}", label = "Puntos", color = Color(0xFFFF9800))
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = Color(0xFFF1F3F4))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Nivel", fontSize = 14.sp, color = Color.Gray)
-                    Text(user.reputation.level.name, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { user.reputation.getProgressToNextLevel() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(CircleShape),
-                    color = Color(0xFF1A73E8),
-                    trackColor = Color(0xFFE0E0E0)
-                )
-            }
-        }
-
-        // Acerca de
-        InfoSection(
-            title = "ACERCA DE",
-            items = listOf(
-                InfoItemData(Icons.Outlined.CalendarMonth, "Miembro desde", "enero de 2025"),
-                InfoItemData(Icons.Outlined.CardMembership, "Insignias obtenidas", "${user.reputation.badges.size}")
-            )
-        )
-
-        // Servicios Ofrecidos
+        // Estadísticas y Servicios
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .offset(y = (-24).dp)
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .background(Color.White)
+                .padding(top = 24.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceAround
             ) {
-                Text(
-                    "SERVICIOS OFRECIDOS",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Gray
-                    )
-                )
-                Surface(
-                    color = Color(0xFFF1F3F4),
-                    shape = CircleShape
-                ) {
-                    Text(
-                        "${services.size}",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                ProviderStatItem(value = "${user.stats.activePosts}", label = "Servicios", color = MaterialTheme.colorScheme.primary)
+                ProviderStatItem(value = "${user.stats.finishedPosts}", label = "Completados", color = Color(0xFF2ECC71))
+                ProviderStatItem(value = "${user.reputation.points}", label = "Puntos", color = Color(0xFFFF9800))
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            InfoSection(
+                title = "ACERCA DE",
+                items = listOf(
+                    InfoItemData(Icons.Outlined.CalendarMonth, "Miembro desde", "enero de 2025"),
+                    InfoItemData(Icons.Outlined.CardMembership, "Insignias", "${user.reputation.badges.size}")
+                )
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                "SERVICIOS OFRECIDOS",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color.Gray),
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
             Spacer(modifier = Modifier.height(12.dp))
             
-            services.forEach { post ->
-                ProviderServiceItem(post)
-                Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                services.forEach { post ->
+                    ProviderServiceItem(post)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
+            
+            Spacer(modifier = Modifier.height(100.dp))
         }
-        
-        Spacer(modifier = Modifier.height(100.dp))
     }
 }
 
@@ -325,26 +291,18 @@ fun InfoSection(title: String, items: List<InfoItemData>) {
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
+            .background(Color(0xFFF8F9FA))
             .padding(16.dp)
     ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = Color.Gray
-            )
-        )
+        Text(title, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color.Gray))
         Spacer(modifier = Modifier.height(16.dp))
         items.forEachIndexed { index, item ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color(0xFFE8EFFF), RoundedCornerShape(8.dp)),
+                    modifier = Modifier.size(40.dp).background(Color.White, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(item.icon, null, tint = Color(0xFF1A73E8), modifier = Modifier.size(20.dp))
+                    Icon(item.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
@@ -371,42 +329,23 @@ fun ProviderServiceItem(post: ServicePost) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = null,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                    modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Star, null, tint = Color.White)
-                }
+                Box(modifier = Modifier.size(60.dp).background(Color.LightGray, RoundedCornerShape(8.dp)))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    post.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Text(post.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(post.description, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Surface(
-                color = Color(0xFFE8EFFF),
-                shape = RoundedCornerShape(4.dp)
-            ) {
+            Surface(color = Color(0xFFE8EFFF), shape = RoundedCornerShape(4.dp)) {
                 Text(
                     post.category.name,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     fontSize = 10.sp,
-                    color = Color(0xFF1A73E8),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }

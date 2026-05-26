@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,10 +27,9 @@ import coil.compose.AsyncImage
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
 import com.example.ruvo_app.core.component.LocationDropdown
-import com.example.ruvo_app.core.component.ServicePostCard
+import com.example.ruvo_app.core.component.PriceFilterSheet
 import com.example.ruvo_app.domain.model.ServicePost
-import com.example.ruvo_app.domain.model.ServiceCategory
-import com.example.ruvo_app.domain.model.GeoPoint
+import com.example.ruvo_app.domain.model.PostStatus
 import com.example.ruvo_app.features.dashboard.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,19 +39,29 @@ fun SearchScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    
-    // Estados para los filtros de ubicación
     var selectedCountry by remember { mutableStateOf("País") }
     var selectedRegion by remember { mutableStateOf("Región") }
     var selectedCity by remember { mutableStateOf("Ciudad") }
+    var maxPriceFilter by remember { mutableStateOf<Float?>(null) }
+    var showPriceFilter by remember { mutableStateOf(false) }
 
     val services by viewModel.services.collectAsState()
     val countries by viewModel.countries.collectAsState()
     val regions by viewModel.regions.collectAsState()
     val cities by viewModel.cities.collectAsState()
 
-    // Lógica de filtrado inteligente (Cruzado + Búsqueda)
-    val filteredServices = remember(searchQuery, selectedCountry, selectedRegion, selectedCity, services) {
+    if (showPriceFilter) {
+        PriceFilterSheet(
+            currentMaxPrice = maxPriceFilter,
+            onDismiss = { showPriceFilter = false },
+            onPriceSelected = { 
+                maxPriceFilter = it
+                showPriceFilter = false
+            }
+        )
+    }
+
+    val filteredServices = remember(searchQuery, selectedCountry, selectedRegion, selectedCity, maxPriceFilter, services) {
         services.filter { service ->
             val matchesQuery = if (searchQuery.isBlank()) true 
                               else service.title.contains(searchQuery, ignoreCase = true) ||
@@ -68,7 +76,10 @@ fun SearchScreen(
             val matchesCity = if (selectedCity == "Ciudad") true 
                              else service.city.equals(selectedCity, ignoreCase = true)
             
-            matchesQuery && matchesCountry && matchesRegion && matchesCity
+            val matchesPrice = if (maxPriceFilter == null) true
+                              else service.minPrice <= maxPriceFilter!!
+            
+            matchesQuery && matchesCountry && matchesRegion && matchesCity && matchesPrice
         }
     }
 
@@ -77,108 +88,84 @@ fun SearchScreen(
             .fillMaxSize()
             .background(Color(0xFFF8F9FA))
     ) {
-        // Header (Buscador y Filtros)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
-                .padding(16.dp),
+                .statusBarsPadding()
+                .padding(bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Buscador",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(vertical = 8.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Barra de Búsqueda con funcionalidad de filtrado
             TextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(28.dp)),
-                placeholder = { Text("¿Qué servicio buscas?", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Black) },
+                    .padding(horizontal = 16.dp)
+                    .height(54.dp)
+                    .clip(RoundedCornerShape(27.dp)),
+                placeholder = { Text("¿Qué servicio buscas?", color = Color.Gray, fontSize = 14.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
                 trailingIcon = { 
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Close, contentDescription = "Limpiar")
-                        }
+                        IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, null) }
                     } else {
-                        Icon(Icons.Outlined.MoreVert, contentDescription = null, tint = Color.Black)
+                        IconButton(onClick = { showPriceFilter = true }) {
+                            Icon(Icons.Default.FilterList, null, tint = if (maxPriceFilter != null) MaterialTheme.colorScheme.primary else Color.Black)
+                        }
                     }
                 },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color(0xFFF1F3F4),
                     unfocusedContainerColor = Color(0xFFF1F3F4),
-                    disabledContainerColor = Color(0xFFF1F3F4),
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Filtros de Ubicación Dinámicos
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    Icons.Default.LocationOn,
-                    contentDescription = null,
-                    tint = Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
-
                 LocationDropdown(
                     selectedOption = selectedCountry,
                     options = countries,
-                    onOptionSelected = { 
-                        selectedCountry = it
-                        selectedRegion = "Región" // Reset dependientes
-                        selectedCity = "Ciudad"
-                    },
+                    onOptionSelected = { selectedCountry = it; selectedRegion = "Región"; selectedCity = "Ciudad" },
                     modifier = Modifier.weight(1f),
                     placeholder = "País"
                 )
-
                 LocationDropdown(
                     selectedOption = selectedRegion,
-                    options = if (selectedCountry == "País") regions else regions.filter { region ->
-                        services.any { it.country == selectedCountry && it.region == region } || region == "Región"
-                    },
-                    onOptionSelected = { 
-                        selectedRegion = it
-                        selectedCity = "Ciudad" // Reset dependientes
-                    },
+                    options = if (selectedCountry == "País") regions else regions.filter { r -> services.any { it.country == selectedCountry && it.region == r } || r == "Región" },
+                    onOptionSelected = { selectedRegion = it; selectedCity = "Ciudad" },
                     modifier = Modifier.weight(1f),
                     placeholder = "Región"
                 )
-
                 LocationDropdown(
                     selectedOption = selectedCity,
-                    options = if (selectedRegion == "Región") cities else cities.filter { city ->
-                        services.any { it.region == selectedRegion && it.city == city } || city == "Ciudad"
-                    },
+                    options = if (selectedRegion == "Región") cities else cities.filter { c -> services.any { it.region == selectedRegion && it.city == c } || c == "Ciudad" },
                     onOptionSelected = { selectedCity = it },
                     modifier = Modifier.weight(1f),
                     placeholder = "Ciudad"
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
-        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
 
-        // Lista de Servicios Filtrados
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -190,18 +177,12 @@ fun SearchScreen(
                     onClick = {
                         onServiceClick(
                             Screen.DetalleServicio(
-                                id = post.id,
-                                title = post.title,
-                                description = post.description,
-                                category = post.category.name,
-                                location = post.addressText,
+                                id = post.id, title = post.title, description = post.description,
+                                category = post.category.name, location = post.addressText,
                                 priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
-                                providerId = post.authorId,
-                                providerName = "Proveedor",
-                                providerSpecialty = "Especialista",
-                                providerImageRes = R.drawable.isotipo,
-                                rating = 4.8f,
-                                reviewsCount = 12,
+                                providerId = post.authorId, providerName = post.authorName,
+                                providerSpecialty = "Especialista", providerImageRes = R.drawable.isotipo,
+                                rating = post.rating, reviewsCount = post.reviewsCount,
                                 imageRes = R.drawable.card_service,
                                 imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
                             )
@@ -210,27 +191,14 @@ fun SearchScreen(
                 )
             }
             
-            // Estado cuando no hay resultados
             if (filteredServices.isEmpty()) {
                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillParentMaxSize()
-                            .padding(top = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SearchOff,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.LightGray
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No se encontraron servicios",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("No se encontraron servicios", color = Color.Gray)
+                        }
                     }
                 }
             }
@@ -243,136 +211,71 @@ fun SearchScreen(
 fun SearchServiceCard(post: ServicePost, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(110.dp),
+        modifier = Modifier.fillMaxWidth().height(100.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        border = BorderStroke(0.5.dp, Color.LightGray.copy(alpha = 0.5f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Imagen a la Izquierda
-            Box(
-                modifier = Modifier
-                    .width(100.dp)
-                    .fillMaxHeight()
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            ) {
-                val primaryImage = post.images.find { it.isPrimary } ?: post.images.firstOrNull()
-                if (primaryImage != null) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.width(100.dp).fillMaxHeight().padding(8.dp).clip(RoundedCornerShape(8.dp))) {
+                val img = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
+                if (img != null) {
                     AsyncImage(
-                        model = primaryImage.url,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
+                        model = img, 
+                        contentDescription = null, 
+                        modifier = Modifier.fillMaxSize(), 
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Image(
-                        painter = painterResource(id = R.drawable.card_service),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
+                        painter = painterResource(id = R.drawable.card_service), 
+                        contentDescription = null, 
+                        modifier = Modifier.fillMaxSize(), 
                         contentScale = ContentScale.Crop
                     )
                 }
                 
-                // Badge de Categoría dinámico
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(24.dp)
-                        .background(Color.White.copy(alpha = 0.8f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                   Icon(
-                       imageVector = when(post.category) {
-                           ServiceCategory.EDUCACION -> Icons.Default.Book
-                           ServiceCategory.HOGAR -> Icons.Default.Home
-                           ServiceCategory.MASCOTAS -> Icons.Default.Pets
-                           else -> Icons.Default.Work
-                       },
-                       contentDescription = null,
-                       modifier = Modifier.size(14.dp),
-                       tint = Color(0xFF6200EE)
-                   )
+                if (post.status == PostStatus.VERIFICADO) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(4.dp)
+                            .background(Color(0xFF10B981), CircleShape)
+                            .padding(2.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
-
-            // Contenido a la Derecha
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(vertical = 8.dp, horizontal = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+            Column(modifier = Modifier.weight(1f).padding(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = post.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
+                        text = post.title, 
+                        style = MaterialTheme.typography.titleSmall, 
+                        fontWeight = FontWeight.Bold, 
+                        maxLines = 1, 
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Verificado",
-                        tint = Color(0xFF2ECC71),
-                        modifier = Modifier.size(16.dp).padding(start = 4.dp)
-                    )
-                }
-
-                Text(
-                    text = post.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 10.sp,
-                    lineHeight = 12.sp
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (post.status == PostStatus.VERIFICADO) {
                         Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = post.city.ifEmpty { post.addressText },
-                            fontSize = 10.sp,
-                            color = Color.Gray,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            Icons.Default.Verified, 
+                            contentDescription = "Verificado", 
+                            tint = Color(0xFF10B981), 
+                            modifier = Modifier.size(16.dp).padding(start = 4.dp)
                         )
                     }
-
-                    Text(
-                        text = "$ ${post.minPrice.toInt()}",
-                        fontSize = 10.sp,
-                        color = Color(0xFF0047FF),
-                        fontWeight = FontWeight.Bold
-                    )
+                }
+                Text(text = post.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 11.sp)
+                Spacer(modifier = Modifier.weight(1f))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                        Text(text = post.city, fontSize = 10.sp, color = Color.Gray)
+                    }
+                    Text(text = "$ ${post.minPrice.toInt()}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             }
-            
-            Spacer(modifier = Modifier.width(8.dp))
         }
     }
 }

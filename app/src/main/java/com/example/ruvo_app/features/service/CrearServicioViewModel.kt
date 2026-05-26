@@ -9,12 +9,16 @@ import com.example.ruvo_app.domain.model.*
 import com.example.ruvo_app.domain.repository.ImageStorageService
 import com.example.ruvo_app.domain.repository.NotificationRepository
 import com.example.ruvo_app.domain.repository.ServiceRepository
+import com.example.ruvo_app.domain.repository.UserRepository
 import com.example.ruvo_app.domain.service.Achievement
 import com.example.ruvo_app.domain.service.GamificationService
+import com.example.ruvo_app.domain.service.PostStatusUpdate
+import com.example.ruvo_app.domain.service.TrustOptimizerService
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,8 +27,10 @@ import javax.inject.Inject
 class CrearServicioViewModel @Inject constructor(
     private val storageService: ImageStorageService,
     private val serviceRepository: ServiceRepository,
+    private val userRepository: UserRepository,
     private val notificationRepository: NotificationRepository,
-    private val gamificationService: GamificationService
+    private val gamificationService: GamificationService,
+    private val trustOptimizerService: TrustOptimizerService
 ) : ViewModel() {
 
     private val _isUploading = MutableStateFlow(false)
@@ -42,7 +48,6 @@ class CrearServicioViewModel @Inject constructor(
     private val _successMessage = MutableStateFlow<UiText?>(null)
     val successMessage = _successMessage.asStateFlow()
 
-    // Reactive validation states
     private val _titleError = MutableStateFlow<UiText?>(null)
     val titleError = _titleError.asStateFlow()
 
@@ -52,7 +57,6 @@ class CrearServicioViewModel @Inject constructor(
     private val _descriptionError = MutableStateFlow<UiText?>(null)
     val descriptionError = _descriptionError.asStateFlow()
 
-    // Location structured data
     private var currentLat: Double = 0.0
     private var currentLng: Double = 0.0
     private var currentCountry: String = ""
@@ -63,7 +67,7 @@ class CrearServicioViewModel @Inject constructor(
     fun onTitleChanged(title: String) {
         _titleError.value = when {
             title.isBlank() -> UiText.StringResource(R.string.error_required_fields)
-            title.length < 5 -> UiText.DynamicString("El título debe tener al menos 5 caracteres")
+            title.length < 5 -> UiText.StringResource(R.string.error_title_short)
             else -> null
         }
     }
@@ -71,7 +75,7 @@ class CrearServicioViewModel @Inject constructor(
     fun onDescriptionChanged(desc: String) {
         _descriptionError.value = when {
             desc.isBlank() -> UiText.StringResource(R.string.error_required_fields)
-            desc.length < 20 -> UiText.DynamicString("Por favor describe mejor tu servicio (mín. 20 caracteres)")
+            desc.length < 20 -> UiText.StringResource(R.string.error_description_short)
             else -> null
         }
     }
@@ -81,8 +85,8 @@ class CrearServicioViewModel @Inject constructor(
         val maxVal = max.toDoubleOrNull() ?: 0.0
         
         _priceError.value = when {
-            minVal <= 0 || maxVal <= 0 -> UiText.DynamicString("Ingresa precios válidos")
-            minVal >= maxVal -> UiText.DynamicString("El precio mínimo debe ser menor al máximo")
+            minVal <= 0 || maxVal <= 0 -> UiText.StringResource(R.string.error_invalid_prices)
+            minVal >= maxVal -> UiText.StringResource(R.string.error_min_price_higher)
             else -> null
         }
     }
@@ -98,7 +102,7 @@ class CrearServicioViewModel @Inject constructor(
 
     fun uploadImage(uri: Uri) {
         if (_uploadedImages.value.size >= 3) {
-            _error.value = UiText.DynamicString("Solo puedes subir hasta 3 imágenes")
+            _error.value = UiText.StringResource(R.string.error_max_images)
             return
         }
 
@@ -142,21 +146,26 @@ class CrearServicioViewModel @Inject constructor(
     ) {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         
-        // Final Validation check
         if (_titleError.value != null || _priceError.value != null || _descriptionError.value != null) {
-            _error.value = UiText.DynamicString("Por favor corrige los errores en el formulario")
+            _error.value = UiText.StringResource(R.string.error_form_invalid)
             return
         }
 
         if (_uploadedImages.value.isEmpty()) {
-            _error.value = UiText.DynamicString("Debes subir al menos una imagen")
+            _error.value = UiText.StringResource(R.string.error_no_images)
             return
         }
 
         viewModelScope.launch {
             _isSaving.value = true
+            
+            val userResult = userRepository.getUserProfile(currentUserId).first()
+            val user = userResult.getOrNull()
+
             val newPost = ServicePost(
                 authorId = currentUserId,
+                authorName = user?.fullName ?: "Proveedor",
+                authorProfilePictureUrl = user?.profilePictureUrl,
                 title = titulo,
                 category = try { ServiceCategory.valueOf(categoria.uppercase()) } catch(e: Exception) { ServiceCategory.HOGAR },
                 description = descripcion,
@@ -174,22 +183,55 @@ class CrearServicioViewModel @Inject constructor(
             )
 
             val result = serviceRepository.saveServicePost(newPost)
-            result.onSuccess {
+            result.onSuccess { generatedId ->
+                _successMessage.value = UiText.StringResource(R.string.success_service_sent)
+                onSuccess()
+                
                 gamificationService.checkAndAwardAchievement(currentUserId, Achievement.Emprendedor)
 
-                notificationRepository.sendNotification(
-                    Notification(
-                        receiverId = currentUserId,
-                        type = NotificationType.ESTADO_ACTUALIZADO,
-                        message = "Tu servicio '$titulo' ha sido enviado para revisión."
-                    )
-                )
-                _successMessage.value = UiText.DynamicString("¡Servicio creado exitosamente! Un moderador lo revisará pronto.")
-                onSuccess()
+                val savedPost = newPost.copy(id = generatedId)
+                viewModelScope.launch {
+                    analyzePostTrust(savedPost)
+                }
+                
             }.onFailure { e ->
                 _error.value = UiText.StringResource(R.string.error_save_failed)
             }
             _isSaving.value = false
+        }
+    }
+
+    private suspend fun analyzePostTrust(post: ServicePost) {
+        val analysisResult = trustOptimizerService.analyzePost(post)
+        analysisResult.onSuccess { result ->
+            val finalStatus = when(result.status) {
+                PostStatusUpdate.APROBADO -> PostStatus.VERIFICADO
+                PostStatusUpdate.REVISION_MANUAL -> PostStatus.REVISION_MANUAL
+                PostStatusUpdate.REVISION_MANUAL_PRIORITARIA -> PostStatus.REVISION_MANUAL_PRIORITARIA
+                PostStatusUpdate.RECHAZADO -> PostStatus.RECHAZADO
+            }
+            
+            serviceRepository.updateTrustAnalysis(
+                postId = post.id,
+                score = result.score,
+                textScore = result.textScore,
+                imageScore = result.imageScore,
+                analysis = result.summary,
+                details = result.details,
+                aiConfidence = result.aiConfidence,
+                riskHighlights = result.riskHighlights,
+                newStatus = finalStatus
+            )
+            
+            if (finalStatus == PostStatus.VERIFICADO) {
+                notificationRepository.sendNotification(
+                    Notification(
+                        receiverId = post.authorId,
+                        type = NotificationType.ESTADO_ACTUALIZADO,
+                        message = "🚀 ¡Excelente calidad! Tu servicio '${post.title}' ha sido aprobado automáticamente por nuestro Optimizador de Confianza."
+                    )
+                )
+            }
         }
     }
     

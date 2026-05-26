@@ -8,9 +8,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
@@ -36,6 +38,7 @@ fun EditProfileScreen(
     viewModel: EditProfileViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
     
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -44,6 +47,7 @@ fun EditProfileScreen(
     }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -57,14 +61,18 @@ fun EditProfileScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
+                windowInsets = WindowInsets.statusBars // Edge-to-Edge: Barra de estado
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp) // Desactivamos insets automáticos
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding() // Sube el contenido con el teclado
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -95,7 +103,6 @@ fun EditProfileScreen(
                     )
                 }
                 
-                // Overlay for loading
                 if (uiState.isUploadingImage) {
                     Box(
                         modifier = Modifier
@@ -107,7 +114,6 @@ fun EditProfileScreen(
                     }
                 }
                 
-                // Camera Icon Badge
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -140,7 +146,7 @@ fun EditProfileScreen(
                     value = uiState.fullName,
                     onValueChange = { viewModel.onFullNameChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Tu nombre") },
+                    placeholder = { Text("Tu nombre", color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
                 )
@@ -160,7 +166,7 @@ fun EditProfileScreen(
                     value = uiState.phone,
                     onValueChange = { viewModel.onPhoneChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Tu número de teléfono") },
+                    placeholder = { Text("Tu número de teléfono", color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true
@@ -181,7 +187,7 @@ fun EditProfileScreen(
                     value = uiState.city,
                     onValueChange = { viewModel.onCityChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Tu ciudad") },
+                    placeholder = { Text("Tu ciudad", color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
                 )
@@ -197,6 +203,7 @@ fun EditProfileScreen(
             }
 
             Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = {
@@ -225,7 +232,9 @@ fun EditProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Margen para barra de navegación gestual
+            Spacer(modifier = Modifier.navigationBarsPadding())
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

@@ -47,31 +47,36 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            is ProfileUiState.Loading -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            }
-            is ProfileUiState.Error -> {
-                Text(
-                    text = state.message,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.align(Alignment.Center),
-                    textAlign = TextAlign.Center
-                )
-            }
-            is ProfileUiState.Success -> {
-                ProfileContent(
-                    user = state.user,
-                    services = state.services,
-                    scrollState = scrollState,
-                    onSettingsClick = onSettingsClick,
-                    onSolicitudesClick = onSolicitudesClick,
-                    onMisTrabajosClick = onMisTrabajosClick,
-                    onServiceClick = onServiceClick,
-                    onArchiveClick = { viewModel.archiveService(it) },
-                    onReactivateClick = { viewModel.reactivateService(it) }
-                )
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0.dp) // Edge-to-Edge: Control manual
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            when (val state = uiState) {
+                is ProfileUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is ProfileUiState.Error -> {
+                    Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.align(Alignment.Center),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                is ProfileUiState.Success -> {
+                    ProfileContent(
+                        user = state.user,
+                        services = state.services,
+                        scrollState = scrollState,
+                        onSettingsClick = onSettingsClick,
+                        onSolicitudesClick = onSolicitudesClick,
+                        onMisTrabajosClick = onMisTrabajosClick,
+                        onServiceClick = onServiceClick,
+                        onArchiveClick = { viewModel.archiveService(it) },
+                        onReactivateClick = { viewModel.reactivateService(it) }
+                    )
+                }
             }
         }
     }
@@ -97,23 +102,23 @@ fun ProfileContent(
             .background(Color(0xFFF5F7FA))
             .verticalScroll(scrollState)
     ) {
-        // Blue Header
+        // Header Azul Inmersivo
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.primary)
-                .padding(bottom = 32.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp),
+                    .statusBarsPadding() // Respeta la barra de estado
+                    .padding(bottom = 48.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -184,22 +189,21 @@ fun ProfileContent(
             }
         }
 
-        // Stats and Content
+        // Estadísticas y Contenido
         Column(
             modifier = Modifier
-                .offset(y = (-20).dp)
+                .offset(y = (-24).dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(Color.White)
-                .padding(top = 24.dp, bottom = 24.dp)
+                .padding(top = 24.dp)
         ) {
-            // Level Card
+            // Nivel Card
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White,
-                tonalElevation = 2.dp,
-                shadowElevation = 4.dp
+                shadowElevation = 2.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -231,18 +235,12 @@ fun ProfileContent(
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = Color.LightGray.copy(alpha = 0.3f)
                     )
-                    Text(
-                        text = "${user.reputation.points} XP acumulados",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Action Buttons for Provider
+            // Botones de acción
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -272,7 +270,7 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Totals Row
+            // Totales
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.SpaceAround
@@ -283,45 +281,7 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Estado de servicios
-            Text(
-                text = stringResource(R.string.profile_service_status),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                StatusRow(icon = Icons.Default.CheckCircleOutline, label = stringResource(R.string.profile_active), count = "${user.stats.activePosts}", color = Color(0xFF4CAF50))
-                StatusRow(icon = Icons.Default.AccessTime, label = stringResource(R.string.profile_pending), count = "${user.stats.pendingVerification}", color = Color(0xFFFFC107))
-                StatusRow(icon = Icons.Default.Inventory2, label = stringResource(R.string.profile_finished), count = "${user.stats.finishedPosts}", color = Color(0xFF9C27B0))
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Logros e insignias
-            Text(
-                text = stringResource(R.string.profile_achievements),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(start = 24.dp, end = 24.dp)
-            ) {
-                if (user.reputation.badges.isEmpty()) {
-                    item {
-                        Text("Aún no tienes insignias", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(vertical = 20.dp))
-                    }
-                } else {
-                    items(user.reputation.badges) { badge ->
-                        AchievementItem(badge)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-            
+            // Mis Servicios
             Text(
                 text = stringResource(R.string.profile_my_services),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -350,7 +310,6 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(16.dp))
             
-            // List of real services from Firestore
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -372,8 +331,6 @@ fun ProfileContent(
                     filteredServices.forEach { post ->
                         ServicePostCard(
                             post = post,
-                            authorName = user.fullName,
-                            authorRole = user.reputation.level.name,
                             showOptions = true,
                             onArchive = { onArchiveClick(post.id) },
                             onReactivate = { onReactivateClick(post.id) },
@@ -383,7 +340,9 @@ fun ProfileContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(100.dp))
+            // Margen para barra de navegación
+            Spacer(modifier = Modifier.navigationBarsPadding())
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -402,67 +361,5 @@ fun StatItem(icon: ImageVector, count: String, label: String, iconColor: Color) 
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = count, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
         Text(text = label, style = MaterialTheme.typography.labelSmall.copy(color = Color.Gray))
-    }
-}
-
-@Composable
-fun StatusRow(icon: ImageVector, label: String, count: String, color: Color) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(text = label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Text(text = count, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-    }
-}
-
-@Composable
-fun AchievementItem(title: String) {
-    val (emoji, bgColor) = when (title) {
-        "Bienvenido a Ruvo" -> "🏅" to Color(0xFFE8F5E9)
-        "Primer Contacto" -> "💬" to Color(0xFFE3F2FD)
-        "Emprendedor" -> "🚀" to Color(0xFFFFF3E0)
-        "Popular" -> "✨" to Color(0xFFF3E5F5)
-        "Mano de Obra" -> "🛠️" to Color(0xFFEFEBE9)
-        "Explorador" -> "🔍" to Color(0xFFF1F8E9)
-        "Crítico" -> "⭐" to Color(0xFFFFFDE7)
-        else -> "🎯" to Color(0xFFF5F5F5)
-    }
-
-    Surface(
-        modifier = Modifier.size(width = 100.dp, height = 120.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(bgColor, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = emoji, fontSize = 22.sp)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 12.sp,
-                    fontSize = 10.sp
-                ),
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                color = Color.DarkGray
-            )
-        }
     }
 }

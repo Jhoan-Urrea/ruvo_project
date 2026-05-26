@@ -24,15 +24,17 @@ import com.example.ruvo_app.domain.model.Service
 @Composable
 fun UserServiceCard(
     service: Service,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier
@@ -40,16 +42,21 @@ fun UserServiceCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Service Image
-            Image(
-                painter = painterResource(id = R.drawable.isotipo), // Fallback image
-                contentDescription = null,
+            // Imagen del servicio con mejor clip
+            Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(85.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF5F5F5)),
-                contentScale = ContentScale.Fit
-            )
+                    .background(Color(0xFFF8F9FA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.isotipo),
+                    contentDescription = null,
+                    modifier = Modifier.size(45.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -61,28 +68,36 @@ fun UserServiceCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
+                    // Título en 2 líneas para evitar pérdida de información
                     Text(
                         text = service.title,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp
                         ),
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                     
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 4.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
                             tint = Color(0xFFFFB300),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${service.rating}",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
                         )
                     }
                 }
@@ -90,7 +105,10 @@ fun UserServiceCard(
                 Text(
                     text = service.category,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 12.sp
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -104,20 +122,22 @@ fun UserServiceCard(
                         text = "$${service.price}",
                         style = MaterialTheme.typography.titleMedium.copy(
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp
                         )
                     )
                     
                     Surface(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = "Ver detalles",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            text = "Gestionar",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
                             )
                         )
                     }

@@ -17,6 +17,7 @@ import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -80,14 +81,9 @@ class SolicitudesViewModel @Inject constructor(
                 
                 // GAMIFICACIÓN: Si se completa el trabajo
                 if (nuevoEstado == RequestStatus.COMPLETADA) {
-                    // 1. Logro para el proveedor (si es el primero)
                     gamificationService.checkAndAwardAchievement(request.providerId, Achievement.ManoDeObra)
-                    
-                    // 2. Puntos base por completar trabajo (+100 XP para ambos)
                     userRepository.addUserPoints(request.providerId, 100)
                     userRepository.addUserPoints(request.customerId, 100)
-                    
-                    // 3. Actualizar estadísticas del usuario (finishedPosts)
                     userRepository.updateUserProfile(request.providerId, mapOf("finishedPosts" to com.google.firebase.firestore.FieldValue.increment(1)))
                 }
 
@@ -104,21 +100,23 @@ class SolicitudesViewModel @Inject constructor(
 
     fun calificarServicio(request: ServiceRequest, rating: Int, comment: String) {
         viewModelScope.launch {
+            // Obtenemos el perfil del cliente para guardar su foto en la reseña (desnormalización para performance)
+            val customerProfile = userRepository.getUserProfile(request.customerId).first().getOrNull()
+            
             val review = Review(
                 serviceId = request.serviceId,
                 providerId = request.providerId,
                 customerId = request.customerId,
                 customerName = request.customerName,
+                customerProfilePictureUrl = customerProfile?.profilePictureUrl,
                 rating = rating,
                 comment = comment
             )
             val result = reviewRepository.addReview(review)
             if (result.isSuccess) {
-                // GAMIFICACIÓN: Logro Crítico al dejar la primera reseña
                 gamificationService.checkAndAwardAchievement(request.customerId, Achievement.Critico)
                 userRepository.addUserPoints(request.customerId, 20)
                 
-                // Opcional: Notificar al proveedor
                 notificationRepository.sendNotification(
                     Notification(
                         receiverId = request.providerId,

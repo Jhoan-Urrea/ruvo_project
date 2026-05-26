@@ -2,9 +2,11 @@ package com.example.ruvo_app.features.login
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
@@ -37,8 +39,10 @@ fun ResetPasswordScreen(
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {
@@ -57,20 +61,28 @@ fun ResetPasswordScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+                    containerColor = Color.White
+                ),
+                windowInsets = WindowInsets.statusBars // Edge-to-Edge: Barra de estado
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp) // Control manual de insets
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(paddingValues)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .imePadding() // Sube el contenido cuando el teclado aparece
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // Icono de candado
                 Box(
@@ -123,14 +135,14 @@ fun ResetPasswordScreen(
                         value = uiState.newPassword,
                         onValueChange = { viewModel.onNewPasswordChanged(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Ingresa tu nueva contraseña") },
+                        placeholder = { Text("Ingresa tu nueva contraseña", color = Color.Gray) },
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = Color.Gray)
                         },
                         trailingIcon = {
                             val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = null)
+                                Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -139,7 +151,9 @@ fun ResetPasswordScreen(
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.LightGray
+                            unfocusedBorderColor = Color.LightGray,
+                            focusedContainerColor = Color(0xFFF8F9FA),
+                            unfocusedContainerColor = Color(0xFFF8F9FA)
                         )
                     )
                 }
@@ -176,14 +190,14 @@ fun ResetPasswordScreen(
                         value = uiState.confirmPassword,
                         onValueChange = { viewModel.onConfirmPasswordChanged(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Confirma tu nueva contraseña") },
+                        placeholder = { Text("Confirma tu nueva contraseña", color = Color.Gray) },
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = Color.Gray)
                         },
                         trailingIcon = {
                             val image = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                             IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                                Icon(imageVector = image, contentDescription = null)
+                                Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -192,7 +206,9 @@ fun ResetPasswordScreen(
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.LightGray
+                            unfocusedBorderColor = Color.LightGray,
+                            focusedContainerColor = Color(0xFFF8F9FA),
+                            unfocusedContainerColor = Color(0xFFF8F9FA)
                         )
                     )
                 }
@@ -202,11 +218,13 @@ fun ResetPasswordScreen(
                         text = uiState.error!!,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = 8.dp),
+                        textAlign = TextAlign.Center
                     )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
                     onClick = { 
@@ -221,24 +239,23 @@ fun ResetPasswordScreen(
                     ),
                     enabled = !uiState.isLoading
                 ) {
-                    Text(
-                        text = "Restablecer contraseña",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    } else {
+                        Text(
+                            text = "Restablecer contraseña",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
-                    )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.navigationBarsPadding()) // Margen para barra de navegación
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            
             if (uiState.isPasswordReset) {
                 AlertDialog(
                     onDismissRequest = { /* Handle dismiss */ },

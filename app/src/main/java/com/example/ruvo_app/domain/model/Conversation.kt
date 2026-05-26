@@ -1,5 +1,8 @@
 package com.example.ruvo_app.domain.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Conversation(
     val id: String = "",
     val participants: List<String> = emptyList(),

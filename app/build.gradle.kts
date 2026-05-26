@@ -22,6 +22,10 @@ val stadiaApiKey: String = localProperties.getProperty("STADIA_API_KEY")
     ?: System.getenv("STADIA_API_KEY") 
     ?: ""
 
+val geminiApiKey: String = localProperties.getProperty("GEMINI_API_KEY")
+    ?: System.getenv("GEMINI_API_KEY")
+    ?: ""
+
 android {
     namespace = "com.example.ruvo_app"
     compileSdk = 35
@@ -35,8 +39,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Inyección de la clave en BuildConfig
+        // Inyección de claves en BuildConfig
         buildConfigField("String", "STADIA_API_KEY", "\"$stadiaApiKey\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -60,7 +65,7 @@ android {
 
     buildFeatures {
         compose = true
-        buildConfig = true // Habilitamos la generación de BuildConfig
+        buildConfig = true
     }
 }
 
@@ -92,6 +97,9 @@ dependencies {
     
     // DataStore
     implementation(libs.androidx.datastore.preferences)
+    
+    // Gemini AI
+    implementation(libs.google.generativeai)
     
     // Firebase
     implementation(platform(libs.firebase.bom))

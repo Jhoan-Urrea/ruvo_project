@@ -24,17 +24,20 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role) ||
                    isModerator() ||
-                   (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points', 'level', 'badges', 'totalReviews']));
+                   (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points', 'level', 'badges', 'totalReviews', 'rating']));
     }
 
-    // 2. SERVICIOS: Lectura pública, escritura protegida
+    // 2. SERVICIOS: Lectura pública, escritura protegida con validación de IA
     match /services_posts/{postId} {
       allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.authorId ||
         isModerator() ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'rating', 'reviewsCount'])) ||
+        (request.auth.uid == resource.data.authorId &&
+          // El autor no puede marcar como VERIFICADO si el score de confianza es bajo.
+          (request.resource.data.status != 'VERIFICADO' || request.resource.data.trustScore > 80)
+        )
       );
       allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isModerator());
     }
@@ -56,7 +59,7 @@ service cloud.firestore {
       allow create: if isSignedIn();
     }
 
-    // 5. SOLICITUDES DE SERVICIO: Privacidad entre cliente y proveedor
+    // 5. SOLICITUDES DE SERVICIO: Privacidad entre cliente y proveedor y supervisión de moderadores
     match /service_requests/{requestId} {
       allow create: if isSignedIn();
       allow read, update: if isSignedIn() && (
@@ -66,10 +69,25 @@ service cloud.firestore {
       );
     }
 
-    // 6. REPORTES: Solo creación y lectura del autor
+    // 6. REPORTES: Solo creación y lectura del autor o moderador
     match /reports/{reportId} {
       allow create: if isSignedIn();
-      allow read: if isSignedIn() && (resource.data.createdBy == request.auth.uid || isModerator());
+      allow read: if isSignedIn() && (resource.data.reporterId == request.auth.uid || isModerator());
+      allow update: if isModerator();
+    }
+
+    // 7. RESEÑAS: Lectura pública y creación por parte del cliente autenticado
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+      allow delete: if isModerator();
+    }
+
+    // 8. COMENTARIOS: Lectura pública y creación por usuarios autenticados
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isModerator());
     }
 
     // BLOQUEO GLOBAL

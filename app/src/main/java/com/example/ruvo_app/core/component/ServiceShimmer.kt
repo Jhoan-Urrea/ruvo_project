@@ -12,53 +12,56 @@ fun ServiceCardShimmer() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // Imagen principal
+        // Imagen principal inmersiva
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
+                .height(200.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .shimmerEffect()
         )
         
         Spacer(modifier = Modifier.height(12.dp))
         
-        // Título
+        // Título (Placeholder)
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.7f)
-                .height(20.dp)
+                .fillMaxWidth(0.6f)
+                .height(24.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .shimmerEffect()
         )
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Descripción
+        // Descripción (Placeholder)
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
-                .height(14.dp)
+                .height(16.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .shimmerEffect()
         )
         
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
         // Fila inferior (Avatar + Precio)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            modifier = Modifier.fillMaxWidth(), 
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(18.dp))
                     .shimmerEffect()
             )
             Box(
                 modifier = Modifier
-                    .width(80.dp)
-                    .height(18.dp)
+                    .width(100.dp)
+                    .height(20.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .shimmerEffect()
             )
@@ -68,8 +71,9 @@ fun ServiceCardShimmer() {
 
 @Composable
 fun DashboardShimmer() {
-    Column(modifier = Modifier.fillMaxSize()) {
-        repeat(3) {
+    // Column sin fillMaxSize para respetar el scroll del contenedor padre
+    Column(modifier = Modifier.fillMaxWidth()) {
+        repeat(4) {
             ServiceCardShimmer()
         }
     }

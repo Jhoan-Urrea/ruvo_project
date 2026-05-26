@@ -21,19 +21,22 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBackClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onEditProfileClick: () -> Unit
+    onEditProfileClick: () -> Unit,
+    onSecurityClick: () -> Unit,
+    onHelpCenterClick: () -> Unit,
+    onPrivacyTermsClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     var notificationsEnabled by remember { mutableStateOf(true) }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -47,9 +50,11 @@ fun SettingsScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
+                windowInsets = WindowInsets.statusBars // Edge-to-Edge: Barra de estado
             )
-        }
+        },
+        contentWindowInsets = WindowInsets(0.dp) // Control manual de insets
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -57,9 +62,11 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .background(Color(0xFFF8F9FA))
                 .verticalScroll(scrollState)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Bloque A: Cuenta y Perfil
             SettingsBlock(title = "Cuenta y Perfil") {
                 SettingsItem(
@@ -72,7 +79,7 @@ fun SettingsScreen(
                     icon = Icons.Outlined.Lock,
                     title = "Seguridad",
                     subtitle = "Cambio de contraseña",
-                    onClick = { /* TODO */ }
+                    onClick = onSecurityClick
                 )
             }
 
@@ -93,13 +100,13 @@ fun SettingsScreen(
                     icon = Icons.AutoMirrored.Outlined.HelpOutline,
                     title = "Centro de Ayuda",
                     subtitle = "Preguntas frecuentes y contacto",
-                    onClick = { /* TODO */ }
+                    onClick = onHelpCenterClick
                 )
                 SettingsItem(
                     icon = Icons.Outlined.Info,
                     title = "Privacidad y Términos",
                     subtitle = "Aspectos legales",
-                    onClick = { /* TODO */ }
+                    onClick = onPrivacyTermsClick
                 )
             }
 
@@ -132,7 +139,9 @@ fun SettingsScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(32.dp))
+            // Margen inferior dinámico para la barra de navegación gestual
+            Spacer(modifier = Modifier.navigationBarsPadding())
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

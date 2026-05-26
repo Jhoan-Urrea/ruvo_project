@@ -9,12 +9,11 @@ sealed interface Screen {
     @Serializable object Register : Screen
     @Serializable object ForgotPassword : Screen
     @Serializable object ResetPassword : Screen
-    @Serializable data class Dashboard(val successMessage: String? = null) : Screen
-    @Serializable object Search : Screen
+    @Serializable data class Dashboard(
+        val successMessage: String? = null,
+        val initialTab: Int = 0
+    ) : Screen
     @Serializable object Profile : Screen
-    @Serializable object Notifications : Screen
-    @Serializable object Settings : Screen
-    @Serializable object EditProfile : Screen
     @Serializable data class PerfilProveedor(
         val providerId: String,
         val name: String,
@@ -68,4 +67,11 @@ sealed interface Screen {
     ) : Screen
     @Serializable object MisSolicitudes : Screen
     @Serializable object MisTrabajos : Screen
+    @Serializable object EditProfile : Screen
+    @Serializable object Settings : Screen
+    @Serializable object SecuritySettings : Screen
+    @Serializable object HelpCenter : Screen
+    @Serializable object PrivacyTerms : Screen
+    @Serializable object Search : Screen
+    @Serializable object Notifications : Screen
 }

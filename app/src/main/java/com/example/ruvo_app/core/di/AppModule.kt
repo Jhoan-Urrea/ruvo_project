@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.ruvo_app.data.local.UserPreferencesManager
 import com.example.ruvo_app.data.repository.*
 import com.example.ruvo_app.domain.repository.*
+import com.example.ruvo_app.domain.service.TrustOptimizerService
 import com.example.ruvo_app.domain.usecase.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -79,6 +80,18 @@ object AppModule {
         firestore: FirebaseFirestore,
         userRepository: UserRepository
     ): ReviewRepository = ReviewRepositoryImpl(firestore, userRepository)
+
+    @Provides
+    @Singleton
+    fun provideTrustOptimizerService(
+        @ApplicationContext context: Context
+    ): TrustOptimizerService = TrustOptimizerServiceImpl(context)
+
+    @Provides
+    @Singleton
+    fun provideReportRepository(
+        firestore: FirebaseFirestore
+    ): ReportRepository = ReportRepositoryImpl(firestore)
 
     @Provides
     @Singleton

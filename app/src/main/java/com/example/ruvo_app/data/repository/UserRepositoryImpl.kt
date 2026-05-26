@@ -61,7 +61,6 @@ class UserRepositoryImpl(
         return try {
             val userRef = firestore.collection("users").document(uid)
             
-            // Usamos un transaction para asegurar que el nivel se actualice correctamente basado en los nuevos puntos
             firestore.runTransaction { transaction ->
                 val snapshot = transaction.get(userRef)
                 val currentPoints = snapshot.getLong("points") ?: 0L
@@ -103,6 +102,7 @@ data class UserDto(
     val profilePictureUrl: String? = null,
     val role: String = "USER",
     val points: Int = 0,
+    val rating: Double = 0.0,
     val level: String = "PRINCIPIANTE",
     val badges: List<String> = emptyList(),
     val activePosts: Int = 0,
@@ -120,7 +120,8 @@ data class UserDto(
         role = UserRole.valueOf(role),
         reputation = Reputation(
             points = points,
-            level = UserLevel.fromPoints(points), // Calculado dinámicamente
+            rating = rating.toFloat(),
+            level = UserLevel.fromPoints(points),
             badges = badges
         ),
         stats = UserStats(
@@ -140,6 +141,7 @@ data class UserDto(
             profilePictureUrl = user.profilePictureUrl,
             role = user.role.name,
             points = user.reputation.points,
+            rating = user.reputation.rating.toDouble(),
             level = user.reputation.level.name,
             badges = user.reputation.badges,
             activePosts = user.stats.activePosts,

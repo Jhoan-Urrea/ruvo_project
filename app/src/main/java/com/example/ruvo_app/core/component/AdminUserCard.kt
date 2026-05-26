@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ManageAccounts
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -17,11 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ruvo_app.domain.model.AccountStatus
 import com.example.ruvo_app.domain.model.User
 import com.example.ruvo_app.domain.model.UserRole
+import java.util.Locale
 
 @Composable
 fun AdminUserCard(
@@ -33,10 +34,10 @@ fun AdminUserCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 6.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -45,18 +46,22 @@ fun AdminUserCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Avatar Circle
+                // Avatar con inicial y color de rol con mejor contraste
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                        .size(52.dp)
+                        .background(
+                            if (user.role == UserRole.MODERATOR) Color(0xFF7B1FA2).copy(alpha = 0.1f) 
+                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), 
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = user.fullName.take(1).uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        color = if (user.role == UserRole.MODERATOR) Color(0xFF7B1FA2) else MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 22.sp
                     )
                 }
 
@@ -70,87 +75,99 @@ fun AdminUserCard(
                     ) {
                         Text(
                             text = user.fullName,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                         UserStatusBadge(user.status)
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = user.email, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            color = if (user.role == UserRole.MODERATOR) Color(0xFFF3E5F5) else Color(0xFFE3F2FD),
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text(
-                                text = user.role.name,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (user.role == UserRole.MODERATOR) Color(0xFF7B1FA2) else Color(0xFF1976D2)
-                            )
-                        }
-                    }
+                    Text(
+                        text = user.email, 
+                        style = MaterialTheme.typography.bodySmall, 
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 13.sp
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Stats Row
+            // Fila de Estadísticas Optimizada para evitar amontonamiento
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF8F9FA), RoundedCornerShape(12.dp))
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                UserMiniStat(label = "Servicios", value = "${user.stats.activePosts}")
-                UserMiniStat(label = "Reportes", value = "${user.stats.reportsCount}")
-                RatingStat(value = "${user.reputation.rating}")
+                UserStatItem(
+                    label = "Servicios", 
+                    value = formatStatValue(user.stats.activePosts),
+                    modifier = Modifier.weight(1f)
+                )
+                Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                UserStatItem(
+                    label = "Reportes", 
+                    value = formatStatValue(user.stats.reportsCount),
+                    modifier = Modifier.weight(1f)
+                )
+                Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                UserStatItem(
+                    label = "Puntos", 
+                    value = formatStatValue(user.reputation.points),
+                    modifier = Modifier.weight(1f),
+                    isPrimary = true
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Último activo: ${user.lastActive}",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.LightGray
-            )
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Action Buttons
+            // Botones de acción con jerarquía visual profesional
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedButton(
                     onClick = onView,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(0.dp)
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Ver", fontSize = 12.sp)
+                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Detalle", fontSize = 12.sp)
                 }
 
                 OutlinedButton(
                     onClick = onChangeRole,
-                    modifier = Modifier.weight(1.2f),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(0.dp)
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Icon(Icons.Default.ManageAccounts, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (user.role == UserRole.USER) "Hacer Admin" else "Quitar Admin", fontSize = 12.sp)
+                    Icon(Icons.Default.ManageAccounts, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Rol", fontSize = 12.sp)
                 }
 
                 Button(
                     onClick = onBlock,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                    contentPadding = PaddingValues(0.dp)
+                    modifier = Modifier.weight(1.2f).height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if(user.status == AccountStatus.BLOCKED) Color(0xFF10B981) else Color(0xFFEF4444)
+                    ),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Bloquear", fontSize = 12.sp)
+                    Icon(if(user.status == AccountStatus.BLOCKED) Icons.Default.CheckCircle else Icons.Default.Lock, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if(user.status == AccountStatus.BLOCKED) "Activar" else "Bloquear", fontSize = 12.sp)
                 }
             }
         }
@@ -158,22 +175,23 @@ fun AdminUserCard(
 }
 
 @Composable
-fun UserMiniStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-    }
-}
-
-@Composable
-fun RatingStat(value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(14.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        }
-        Text(text = "Rating", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+fun UserStatItem(label: String, value: String, modifier: Modifier = Modifier, isPrimary: Boolean = false) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value, 
+            fontWeight = FontWeight.ExtraBold, 
+            fontSize = 15.sp,
+            color = if (isPrimary) MaterialTheme.colorScheme.primary else Color.Black
+        )
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.labelSmall, 
+            color = Color.Gray,
+            fontSize = 11.sp
+        )
     }
 }
 
@@ -181,22 +199,22 @@ fun RatingStat(value: String) {
 fun UserStatusBadge(status: AccountStatus) {
     val (color, text, icon) = when (status) {
         AccountStatus.ACTIVE -> Triple(Color(0xFFDCFCE7), "Activo", Icons.Default.CheckCircle)
-        AccountStatus.WARNING -> Triple(Color(0xFFFEF9C3), "Advertencia", Icons.Default.Warning)
+        AccountStatus.WARNING -> Triple(Color(0xFFFEF3C7), "Alerta", Icons.Default.Warning)
         AccountStatus.BLOCKED -> Triple(Color(0xFFFEE2E2), "Bloqueado", Icons.Default.Lock)
     }
     
     val contentColor = when (status) {
         AccountStatus.ACTIVE -> Color(0xFF166534)
-        AccountStatus.WARNING -> Color(0xFF854D0E)
+        AccountStatus.WARNING -> Color(0xFF92400E)
         AccountStatus.BLOCKED -> Color(0xFF991B1B)
     }
 
     Surface(
         color = color,
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(12.dp))
@@ -207,5 +225,13 @@ fun UserStatusBadge(status: AccountStatus) {
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp)
             )
         }
+    }
+}
+
+private fun formatStatValue(value: Int): String {
+    return when {
+        value >= 1000000 -> String.format(Locale.US, "%.1fM", value / 1000000f)
+        value >= 1000 -> String.format(Locale.US, "%.1fK", value / 1000f)
+        else -> value.toString()
     }
 }

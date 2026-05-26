@@ -43,8 +43,12 @@ fun Modifier.shimmerEffect(): Modifier = composed {
 
 @Composable
 fun ChatListShimmer() {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        repeat(6) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        repeat(8) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -60,7 +64,7 @@ fun ChatListShimmer() {
                 Column(modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.6f)
+                            .fillMaxWidth(0.5f)
                             .height(20.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .shimmerEffect()
@@ -68,7 +72,7 @@ fun ChatListShimmer() {
                     Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.9f)
+                            .fillMaxWidth(0.8f)
                             .height(16.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .shimmerEffect()

@@ -29,49 +29,53 @@ class ChatRepositoryImpl @Inject constructor(
             val conversationRef = firestore.collection("conversations").document(convId)
             val messageRef = conversationRef.collection("messages").document()
 
+            // Usamos un batch para asegurar atomicidad
             firestore.runBatch { batch ->
-                // 1. Update Conversation Header with basic fields
-                // Note: Metadata (names/images) should ideally be set when the chat starts
-                // or updated via a separate sync process to avoid redundant writes.
-                val convUpdate = mutableMapOf(
+                // 1. Datos básicos de la conversación
+                val convData = mutableMapOf<String, Any>(
                     "participants" to listOf(message.senderId, message.receiverId),
                     "lastMessage" to message.content,
                     "lastTimestamp" to message.timestamp,
-                    "lastSenderId" to message.senderId,
+                    "lastSenderId" to message.senderId
                 )
                 
-                // Increment unread count for the receiver
-                batch.set(conversationRef, convUpdate, SetOptions.merge())
+                // Merge para no sobreescribir metadatos (nombres/fotos) si ya existen
+                batch.set(conversationRef, convData, SetOptions.merge())
+                
+                // 2. Incrementar contador de no leídos para el receptor
                 batch.update(conversationRef, "unreadCount.${message.receiverId}", FieldValue.increment(1))
                 
-                // 2. Add Message to Sub-collection
+                // 3. Guardar el mensaje en la sub-colección
                 batch.set(messageRef, message.copy(id = messageRef.id))
             }.await()
             
             Result.success(Unit)
         } catch (e: Exception) {
-            // If the document doesn't exist, the update(unreadCount) might fail. 
-            // We should ensure the map exists.
-            try {
-                // Fallback: create with initial unread count
-                val convId = getConversationId(message.senderId, message.receiverId)
-                val conversationRef = firestore.collection("conversations").document(convId)
-                val initialData = mapOf(
-                    "participants" to listOf(message.senderId, message.receiverId),
-                    "lastMessage" to message.content,
-                    "lastTimestamp" to message.timestamp,
-                    "lastSenderId" to message.senderId,
-                    "unreadCount" to mapOf(message.receiverId to 1)
-                )
-                conversationRef.set(initialData, SetOptions.merge()).await()
-                
-                val messageRef = conversationRef.collection("messages").document()
-                messageRef.set(message.copy(id = messageRef.id)).await()
-                
-                Result.success(Unit)
-            } catch (innerE: Exception) {
-                Result.failure(innerE)
-            }
+            // Si el error es porque el documento no existe (update falló), forzamos creación
+            handleNewConversation(message)
+        }
+    }
+
+    private suspend fun handleNewConversation(message: ChatMessage): Result<Unit> {
+        return try {
+            val convId = getConversationId(message.senderId, message.receiverId)
+            val conversationRef = firestore.collection("conversations").document(convId)
+            
+            val initialData = mapOf(
+                "participants" to listOf(message.senderId, message.receiverId),
+                "lastMessage" to message.content,
+                "lastTimestamp" to message.timestamp,
+                "lastSenderId" to message.senderId,
+                "unreadCount" to mapOf(message.receiverId to 1, message.senderId to 0)
+            )
+            
+            conversationRef.set(initialData, SetOptions.merge()).await()
+            val messageRef = conversationRef.collection("messages").document()
+            messageRef.set(message.copy(id = messageRef.id)).await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
@@ -86,7 +90,9 @@ class ChatRepositoryImpl @Inject constructor(
                     close(error)
                     return@addSnapshotListener
                 }
-                val messages = snapshot?.documents?.mapNotNull { it.toObject(ChatMessage::class.java) } ?: emptyList()
+                val messages = snapshot?.documents?.mapNotNull { doc ->
+                    try { doc.toObject(ChatMessage::class.java) } catch (e: Exception) { null }
+                } ?: emptyList()
                 trySend(messages)
             }
         awaitClose { subscription.remove() }
@@ -103,7 +109,9 @@ class ChatRepositoryImpl @Inject constructor(
                 }
                 
                 val conversations = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Conversation::class.java)?.copy(id = doc.id)
+                    try { 
+                        doc.toObject(Conversation::class.java)?.copy(id = doc.id) 
+                    } catch (e: Exception) { null }
                 } ?: emptyList()
                 
                 trySend(conversations)

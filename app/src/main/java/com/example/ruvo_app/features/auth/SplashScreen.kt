@@ -14,19 +14,18 @@ import com.example.ruvo_app.R
 
 @Composable
 fun SplashScreen() {
+    // La SplashScreen debe ser 100% inmersiva
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_ruvo),
-                contentDescription = "Logo",
-                modifier = Modifier.size(140.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
+        Image(
+            painter = painterResource(id = R.drawable.logo_ruvo),
+            contentDescription = "Logo",
+            modifier = Modifier.size(160.dp),
+            contentScale = ContentScale.Fit
+        )
     }
 }

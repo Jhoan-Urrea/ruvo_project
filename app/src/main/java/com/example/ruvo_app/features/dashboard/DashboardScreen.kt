@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -23,7 +22,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.ruvo_app.R
 import com.example.ruvo_app.core.navigation.Screen
-import com.example.ruvo_app.core.theme.Ruvo_appTheme
 import com.example.ruvo_app.features.notifications.NotificationsScreen
 import com.example.ruvo_app.features.profile.ProfileScreen
 import com.example.ruvo_app.features.search.SearchScreen
@@ -39,8 +36,7 @@ import com.example.ruvo_app.core.component.ServicePostCard
 import com.example.ruvo_app.domain.model.ServicePost
 import com.example.ruvo_app.core.component.LocationDropdown
 import com.example.ruvo_app.core.component.DashboardShimmer
-import java.text.NumberFormat
-import java.util.Locale
+import com.example.ruvo_app.core.component.PriceFilterSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,10 +51,11 @@ fun DashboardScreen(
     onMisTrabajosClick: () -> Unit = {},
     isAdmin: Boolean = false,
     initialSuccessMessage: String? = null,
+    initialTab: Int = 0,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     var selectedCategory by remember { mutableStateOf("Todo") }
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(initialTab) }
     
     val services by viewModel.services.collectAsState()
     val countries by viewModel.countries.collectAsState()
@@ -66,6 +63,8 @@ fun DashboardScreen(
     val cities by viewModel.cities.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val maxPriceFilter by viewModel.maxPriceFilter.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    val unreadCount by viewModel.unreadNotificationsCount.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -75,7 +74,16 @@ fun DashboardScreen(
         }
     }
 
+    val backgroundColor = when(selectedTab) {
+        1 -> Color(0xFFF8F9FA)
+        2 -> Color(0xFFF5F5F5)
+        3 -> Color(0xFFF5F7FA)
+        else -> Color(0xFFF8F8F8)
+    }
+
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = backgroundColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (selectedTab == 0) {
@@ -121,21 +129,19 @@ fun DashboardScreen(
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
+                    windowInsets = WindowInsets.statusBars
                 )
             }
         },
         bottomBar = {
-            Column {
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = Color.LightGray.copy(alpha = 0.5f)
-                )
-                BottomNavigationBar(selectedTab) { 
-                    selectedTab = it
-                }
-            }
-        }
+            BottomNavigationBar(
+                selectedTab = selectedTab,
+                unreadCount = unreadCount,
+                onTabSelected = { selectedTab = it }
+            )
+        },
+        contentWindowInsets = WindowInsets(0.dp) 
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -155,7 +161,9 @@ fun DashboardScreen(
                         cities = cities,
                         isLoading = isLoading,
                         maxPriceFilter = maxPriceFilter,
-                        onPriceFilterChange = { viewModel.setMaxPriceFilter(it) }
+                        onPriceFilterChange = { viewModel.setMaxPriceFilter(it) },
+                        sortOrder = sortOrder,
+                        onSortChange = { viewModel.setSortOrder(it) }
                     )
                 }
                 1 -> SearchScreen(onServiceClick = onServiceClick)
@@ -174,22 +182,17 @@ fun DashboardScreen(
                                 location = post.addressText,
                                 priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
                                 providerId = post.authorId,
-                                providerName = "Proveedor",
+                                providerName = post.authorName,
                                 providerSpecialty = "Especialista",
                                 providerImageRes = R.drawable.isotipo,
-                                rating = 4.5f,
-                                reviewsCount = 10,
+                                rating = post.rating,
+                                reviewsCount = post.reviewsCount,
                                 imageRes = R.drawable.card_service,
                                 imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
                             )
                         )
                     }
                 )
-                else -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "Pantalla en construcción")
-                    }
-                }
             }
         }
     }
@@ -208,42 +211,30 @@ fun HomeContent(
     cities: List<String>,
     isLoading: Boolean,
     maxPriceFilter: Float?,
-    onPriceFilterChange: (Float?) -> Unit
+    onPriceFilterChange: (Float?) -> Unit,
+    sortOrder: com.example.ruvo_app.features.dashboard.SortOrder,
+    onSortChange: (com.example.ruvo_app.features.dashboard.SortOrder) -> Unit
 ) {
     var selectedCountry by remember { mutableStateOf("País") }
-    var countryExpanded by remember { mutableStateOf(false) }
-
     var selectedRegion by remember { mutableStateOf("Región") }
-    var regionExpanded by remember { mutableStateOf(false) }
-
     var selectedCity by remember { mutableStateOf("Ciudad") }
-    var cityExpanded by remember { mutableStateOf(false) }
-
     var showPriceFilter by remember { mutableStateOf(false) }
-
-    val sheetState = rememberModalBottomSheetState()
+    var showSortMenu by remember { mutableStateOf(false) }
 
     if (showPriceFilter) {
-        ModalBottomSheet(
-            onDismissRequest = { showPriceFilter = false },
-            sheetState = sheetState,
-            containerColor = Color.White
-        ) {
-            PriceFilterContent(
-                currentMaxPrice = maxPriceFilter,
-                onPriceSelected = { 
-                    onPriceFilterChange(it)
-                    showPriceFilter = false
-                }
-            )
-        }
+        PriceFilterSheet(
+            currentMaxPrice = maxPriceFilter,
+            onDismiss = { showPriceFilter = false },
+            onPriceSelected = { 
+                onPriceFilterChange(it)
+                showPriceFilter = false
+            }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF8F8F8))
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(modifier = Modifier.background(Color.White)) {
                 Text(
@@ -291,7 +282,7 @@ fun HomeContent(
                                 }
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF0047FF),
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = Color.White,
                                 containerColor = Color(0xFFF5F5F5),
                                 labelColor = Color.Gray
@@ -302,144 +293,107 @@ fun HomeContent(
                     }
                 }
 
+                // FILTROS DE UBICACIÓN REFINADOS
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    LocationDropdown(
+                        selectedOption = selectedCountry,
+                        options = countries,
+                        onOptionSelected = { 
+                            selectedCountry = it
+                            selectedRegion = "Región"
+                            selectedCity = "Ciudad"
+                        },
+                        modifier = Modifier.weight(1f),
+                        label = "País",
+                        placeholder = "Seleccionar"
+                    )
+
+                    LocationDropdown(
+                        selectedOption = selectedRegion,
+                        options = if (selectedCountry == "País") regions else regions.filter { region ->
+                            services.any { it.country == selectedCountry && it.region == region } || region == "Región"
+                        },
+                        onOptionSelected = { 
+                            selectedRegion = it
+                            selectedCity = "Ciudad"
+                        },
+                        modifier = Modifier.weight(1f),
+                        label = "Región",
+                        placeholder = "Seleccionar"
+                    )
+
+                    LocationDropdown(
+                        selectedOption = selectedCity,
+                        options = if (selectedRegion == "Región") cities else cities.filter { city ->
+                            services.any { it.region == selectedRegion && it.city == city } || city == "Ciudad"
+                        },
+                        onOptionSelected = { selectedCity = it },
+                        modifier = Modifier.weight(1f),
+                        label = "Ciudad",
+                        placeholder = "Seleccionar"
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
-
-                    // Country Dropdown
-                    ExposedDropdownMenuBox(
-                        expanded = countryExpanded,
-                        onExpandedChange = { countryExpanded = !countryExpanded },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        TextField(
-                            value = selectedCountry,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryExpanded) },
-                            colors = ExposedDropdownMenuDefaults.textFieldColors(
-                                focusedContainerColor = Color(0xFFF5F5F5),
-                                unfocusedContainerColor = Color(0xFFF5F5F5),
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            modifier = Modifier.menuAnchor(),
-                            shape = RoundedCornerShape(8.dp),
-                            textStyle = TextStyle(fontSize = 10.sp)
-                        )
-                        ExposedDropdownMenu(
-                            expanded = countryExpanded,
-                            onDismissRequest = { countryExpanded = false }
-                        ) {
-                            countries.forEach { country ->
-                                DropdownMenuItem(
-                                    text = { Text(country, fontSize = 12.sp) },
-                                    onClick = {
-                                        selectedCountry = country
-                                        countryExpanded = false
-                                        selectedRegion = "Región"
-                                        selectedCity = "Ciudad"
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // Region Dropdown
-                    ExposedDropdownMenuBox(
-                        expanded = regionExpanded,
-                        onExpandedChange = { regionExpanded = !regionExpanded },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        TextField(
-                            value = selectedRegion,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = regionExpanded) },
-                            colors = ExposedDropdownMenuDefaults.textFieldColors(
-                                focusedContainerColor = Color(0xFFF5F5F5),
-                                unfocusedContainerColor = Color(0xFFF5F5F5),
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            modifier = Modifier.menuAnchor(),
-                            shape = RoundedCornerShape(8.dp),
-                            textStyle = TextStyle(fontSize = 10.sp)
-                        )
-                        ExposedDropdownMenu(
-                            expanded = regionExpanded,
-                            onDismissRequest = { regionExpanded = false }
-                        ) {
-                            regions.forEach { region ->
-                                DropdownMenuItem(
-                                    text = { Text(region, fontSize = 12.sp) },
-                                    onClick = {
-                                        selectedRegion = region
-                                        regionExpanded = false
-                                        selectedCity = "Ciudad"
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // City Dropdown
-                    ExposedDropdownMenuBox(
-                        expanded = cityExpanded,
-                        onExpandedChange = { cityExpanded = !cityExpanded },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        TextField(
-                            value = selectedCity,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityExpanded) },
-                            colors = ExposedDropdownMenuDefaults.textFieldColors(
-                                focusedContainerColor = Color(0xFFF5F5F5),
-                                unfocusedContainerColor = Color(0xFFF5F5F5),
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            modifier = Modifier.menuAnchor(),
-                            shape = RoundedCornerShape(8.dp),
-                            textStyle = TextStyle(fontSize = 10.sp)
-                        )
-                        ExposedDropdownMenu(
-                            expanded = cityExpanded,
-                            onDismissRequest = { cityExpanded = false }
-                        ) {
-                            cities.forEach { city ->
-                                DropdownMenuItem(
-                                    text = { Text(city, fontSize = 12.sp) },
-                                    onClick = {
-                                        selectedCity = city
-                                        cityExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    IconButton(
+                    OutlinedButton(
                         onClick = { showPriceFilter = true },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                if (maxPriceFilter != null) Color(0xFFE8EFFF) else Color(0xFFF5F5F5),
-                                RoundedCornerShape(8.dp)
-                            )
+                        modifier = Modifier.height(40.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (maxPriceFilter != null) Color(0xFFE8EFFF) else Color.Transparent,
+                            contentColor = if (maxPriceFilter != null) MaterialTheme.colorScheme.primary else Color.Gray
+                        ),
+                        border = BorderStroke(1.dp, if (maxPriceFilter != null) MaterialTheme.colorScheme.primary else Color.LightGray),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filtro de Precio",
-                            tint = if (maxPriceFilter != null) Color(0xFF0047FF) else Color.Gray,
-                            modifier = Modifier.size(20.dp)
+                        Icon(Icons.Default.AttachMoney, null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (maxPriceFilter != null) "Hasta $${maxPriceFilter.toInt()}" else "Presupuesto",
+                            fontSize = 12.sp
                         )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Box {
+                        OutlinedButton(
+                            onClick = { showSortMenu = true },
+                            modifier = Modifier.height(40.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
+                            border = BorderStroke(1.dp, Color.LightGray),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                            Icon(Icons.Default.Sort, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = sortOrder.label, fontSize = 12.sp)
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            com.example.ruvo_app.features.dashboard.SortOrder.entries.forEach { order ->
+                                DropdownMenuItem(
+                                    text = { Text(order.label) },
+                                    onClick = {
+                                        onSortChange(order)
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
                 
@@ -449,13 +403,10 @@ fun HomeContent(
             if (isLoading) {
                 DashboardShimmer()
             } else {
-                // Listado de Tarjetas Reales con Filtrado Compuesto
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                val filteredAndSortedServices = remember(
+                    services, selectedCategory, selectedCountry, selectedRegion, selectedCity, maxPriceFilter, sortOrder
                 ) {
-                    val filteredServices = services.filter { post ->
+                    services.filter { post ->
                         val matchesCategory = if (selectedCategory == "Todo") true 
                                              else post.category.name.equals(selectedCategory, ignoreCase = true)
                         
@@ -469,23 +420,34 @@ fun HomeContent(
                                           else post.city.equals(selectedCity, ignoreCase = true)
 
                         val matchesPrice = if (maxPriceFilter == null) true
-                                          else post.minPrice <= maxPriceFilter
+                                          else post.minPrice <= maxPriceFilter!!
                         
                         matchesCategory && matchesCountry && matchesRegion && matchesCity && matchesPrice
+                    }.let { filtered ->
+                        when (sortOrder) {
+                            com.example.ruvo_app.features.dashboard.SortOrder.PRICE_LOW_HIGH -> filtered.sortedBy { it.minPrice }
+                            com.example.ruvo_app.features.dashboard.SortOrder.PRICE_HIGH_LOW -> filtered.sortedByDescending { it.minPrice }
+                            com.example.ruvo_app.features.dashboard.SortOrder.RATING_HIGH_LOW -> filtered.sortedByDescending { it.rating }
+                            else -> filtered.sortedByDescending { it.createdAt }
+                        }
                     }
+                }
 
-                    if (filteredServices.isEmpty()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (filteredAndSortedServices.isEmpty()) {
                         item {
                             Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("No hay servicios disponibles con estos filtros", color = Color.Gray)
+                                Text("No hay servicios disponibles", color = Color.Gray)
                             }
                         }
                     } else {
-                        items(filteredServices) { post ->
+                        items(filteredAndSortedServices) { post ->
                             ServicePostCard(
                                 post = post,
-                                authorName = "Proveedor",
-                                authorRole = "Verificado",
                                 onClick = {
                                     onServiceClick(
                                         Screen.DetalleServicio(
@@ -496,11 +458,11 @@ fun HomeContent(
                                             location = post.addressText,
                                             priceRange = "$ ${post.minPrice.toInt()} - $ ${post.maxPrice.toInt()}",
                                             providerId = post.authorId,
-                                            providerName = "Proveedor",
+                                            providerName = post.authorName,
                                             providerSpecialty = "Especialista",
                                             providerImageRes = R.drawable.isotipo,
-                                            rating = 4.5f,
-                                            reviewsCount = 10,
+                                            rating = post.rating,
+                                            reviewsCount = post.reviewsCount,
                                             imageRes = R.drawable.card_service,
                                             imageUrl = post.images.find { it.isPrimary }?.url ?: post.images.firstOrNull()?.url
                                         )
@@ -515,7 +477,7 @@ fun HomeContent(
 
         FloatingActionButton(
             onClick = onAddClick,
-            containerColor = Color(0xFF0047FF),
+            containerColor = MaterialTheme.colorScheme.primary,
             contentColor = Color.White,
             shape = CircleShape,
             modifier = Modifier
@@ -528,92 +490,13 @@ fun HomeContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PriceFilterContent(
-    currentMaxPrice: Float?,
-    onPriceSelected: (Float?) -> Unit
-) {
-    var sliderPosition by remember { mutableFloatStateOf(currentMaxPrice ?: 1000000f) }
-    val format = NumberFormat.getCurrencyInstance(Locale("es", "CO")).apply {
-        maximumFractionDigits = 0
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Filtrar por presupuesto",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Mostrar servicios desde el precio mínimo hasta:",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Text(
-            text = format.format(sliderPosition),
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color(0xFF0047FF),
-            fontWeight = FontWeight.ExtraBold
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Slider(
-            value = sliderPosition,
-            onValueChange = { sliderPosition = it },
-            valueRange = 10000f..2000000f,
-            steps = 19,
-            colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF0047FF),
-                activeTrackColor = Color(0xFF0047FF),
-                inactiveTrackColor = Color(0xFFE8EFFF)
-            )
-        )
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = "$ 10k", fontSize = 12.sp, color = Color.Gray)
-            Text(text = "$ 2M+", fontSize = 12.sp, color = Color.Gray)
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { onPriceSelected(sliderPosition) },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0047FF))
-        ) {
-            Text("Aplicar Filtro", fontWeight = FontWeight.Bold)
-        }
-        
-        TextButton(
-            onClick = { onPriceSelected(null) },
-            modifier = Modifier.padding(top = 8.dp)
-        ) {
-            Text("Limpiar Filtro", color = Color.Gray)
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-@Composable
-fun BottomNavigationBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
+fun BottomNavigationBar(selectedTab: Int, unreadCount: Int, onTabSelected: (Int) -> Unit) {
     NavigationBar(
         containerColor = Color.White,
         tonalElevation = 0.dp,
-        modifier = Modifier.height(80.dp) 
+        windowInsets = WindowInsets.navigationBars
     ) {
         val items = listOf(
             NavigationItem(stringResource(R.string.nav_home), Icons.Default.Home, Icons.Outlined.Home),
@@ -627,10 +510,20 @@ fun BottomNavigationBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
                 selected = selectedTab == index,
                 onClick = { onTabSelected(index) },
                 icon = {
-                    Icon(
-                        imageVector = if (selectedTab == index) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = item.name
-                    )
+                    BadgedBox(
+                        badge = {
+                            if (index == 2 && unreadCount > 0) {
+                                Badge {
+                                    Text(text = if (unreadCount > 9) "9+" else unreadCount.toString())
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (selectedTab == index) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = item.name
+                        )
+                    }
                 },
                 label = { 
                     Text(

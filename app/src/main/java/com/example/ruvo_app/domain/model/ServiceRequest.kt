@@ -11,6 +11,7 @@ data class ServiceRequest(
     val customerName: String,
     val providerId: String,
     val providerName: String,
+    val offeredPrice: Double = 0.0,
     val date: String,
     val time: String,
     val location: String,

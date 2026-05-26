@@ -48,12 +48,12 @@ class RegisterViewModel @Inject constructor(
         // Simple validation
         if (state.fullName.isBlank() || state.phone.isBlank() || 
             state.email.isBlank() || state.password.isBlank()) {
-            _uiState.update { it.copy(error = "Por favor, completa todos los campos") }
+            _uiState.update { it.copy(error = "error_required_fields") }
             return
         }
 
         if (state.password.length < 6) {
-            _uiState.update { it.copy(error = "La contraseña debe tener al menos 6 caracteres") }
+            _uiState.update { it.copy(error = "error_password_too_short") }
             return
         }
 
@@ -80,7 +80,7 @@ class RegisterViewModel @Inject constructor(
                 }
                 onSuccess()
             }.onFailure { e ->
-                _uiState.update { it.copy(error = e.message ?: "Error al registrar usuario") }
+                _uiState.update { it.copy(error = e.message ?: "error_unknown") }
             }
         }
     }
