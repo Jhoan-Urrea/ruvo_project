@@ -1,3 +1,96 @@
 <resources>
-    <string name="app_name">Ruvo</string>
+    <string name="app_name">Ruvo App</string>
+
+    <!-- Auth -->
+    <string name="login_title">Bienvenido a Ruvo</string>
+    <string name="login_email_hint">Correo electrónico</string>
+    <string name="login_password_hint">Contraseña</string>
+    <string name="login_button">Iniciar Sesión</string>
+    <string name="login_no_account">¿No tienes cuenta? Regístrate</string>
+    <string name="error_required_fields">Por favor, completa todos los campos</string>
+    <string name="error_invalid_credentials">Credenciales incorrectas</string>
+    <string name="error_password_too_short">La contraseña debe tener al menos 6 caracteres</string>
+    <string name="error_passwords_dont_match">Las contraseñas no coinciden</string>
+    <string name="error_password_requirements">La contraseña no cumple con todos los requisitos</string>
+    <string name="error_invalid_email">El formato del correo electrónico no es válido</string>
+    <string name="error_email_already_in_use">Este correo electrónico ya está registrado</string>
+    <string name="error_weak_password">La contraseña es muy débil</string>
+    <string name="error_user_not_found">No existe una cuenta asociada a este correo</string>
+    <string name="error_wrong_password">La contraseña es incorrecta</string>
+    <string name="register_title">Crear Cuenta</string>
+    <string name="register_button">Registrarse</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_welcome">Hola, ¿qué necesitas hoy?</string>
+    <string name="dashboard_categories">Categorías</string>
+    <string name="dashboard_recent_services">Servicios Recientes</string>
+    <string name="dashboard_search_hint">Buscar servicios...</string>
+    <string name="dashboard_title">RUVO</string>
+    <string name="dashboard_messages">Mensajes</string>
+    <string name="dashboard_all">Todo</string>
+    <string name="dashboard_featured">Destacado</string>
+    <string name="dashboard_verified">Verificado</string>
+    <string name="dashboard_create">Crear</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Mi perfil</string>
+    <string name="profile_edit">Editar Perfil</string>
+    <string name="profile_sign_out">Cerrar Sesión</string>
+    <string name="profile_history">Historial de Servicios</string>
+    <string name="profile_settings">Ajustes</string>
+    <string name="profile_level">Nivel</string>
+    <string name="profile_points">puntos</string>
+    <string name="profile_total_services">Servicios totales</string>
+    <string name="profile_votes">Votos recibidos</string>
+    <string name="profile_service_status">Estado de servicios</string>
+    <string name="profile_active">Activos</string>
+    <string name="profile_pending">Pendientes de verificación</string>
+    <string name="profile_finished">Finalizados</string>
+    <string name="profile_achievements">Logros e insignias</string>
+    <string name="profile_my_services">Mis Servicios</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notificaciones</string>
+    <string name="notifications_unread_count">Tienes %1$d notificaciones sin leer</string>
+    <string name="notifications_mark_all_read">Marcar todas como leídas</string>
+    <string name="notifications_empty">No tienes notificaciones pendientes</string>
+    <string name="notification_new_service">Nuevo servicio en tu zona</string>
+    <string name="notification_new_service_desc">Se publican más servicios locales sobre Tutorías</string>
+    <string name="notification_new_comment">Nuevo comentario</string>
+    <string name="notification_new_comment_desc">%1$s comentó en tu publicación</string>
+    <string name="notification_service_verified">Nuevo servicio verificado</string>
+    <string name="notification_service_verified_desc">Tu servicio como \"%1$s\" ha sido verificado</string>
+    <string name="notification_achievement">Nuevo logro desbloqueado</string>
+    <string name="notification_achievement_desc">Has alcanzado el nivel %1$s</string>
+    <string name="notification_time_ago">Hace %1$s</string>
+    <string name="notification_post_approved_auto">🚀 ¡Excelente calidad! Tu servicio \'%1$s\' ha sido aprobado automáticamente por nuestro Optimizador de Confianza.</string>
+    <string name="notification_post_approved_moderator">¡Felicidades! Tu servicio \'%1$s\' ha sido aprobado y ya es visible para todos.</string>
+    <string name="notification_post_rejected">Tu servicio \'%1$s\' ha sido rechazado. Motivo: %2$s</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_search">Buscar</string>
+    <string name="nav_notifications">Notificaciones</string>
+    <string name="nav_profile">Perfil</string>
+
+    <!-- Service Creation -->
+    <string name="error_title_short">El título debe tener al menos 5 caracteres</string>
+    <string name="error_description_short">Por favor describe mejor tu servicio (mín. 20 caracteres)</string>
+    <string name="error_invalid_prices">Ingresa precios válidos</string>
+    <string name="error_min_price_higher">El precio mínimo debe ser menor al máximo</string>
+    <string name="error_max_images">Solo puedes subir hasta 3 imágenes</string>
+    <string name="error_form_invalid">Por favor corrige los errores en el formulario</string>
+    <string name="error_no_images">Debes subir al menos una imagen</string>
+    <string name="success_service_sent">¡Servicio enviado! Analizando calidad...</string>
+
+    <!-- Common UI -->
+    <string name="loading">Cargando...</string>
+    <string name="retry">Reintentar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save">Guardar</string>
+    <string name="error_network">Error de conexión. Revisa tu internet.</string>
+    <string name="error_unknown">Algo salió mal. Inténtalo más tarde.</string>
+    <string name="error_upload_failed">No pudimos subir la imagen.</string>
+    <string name="error_save_failed">Error al guardar los datos.</string>
+    <string name="error_service_not_found">El servicio no existe o fue eliminado.</string>
 </resources>

@@ -28,7 +28,8 @@ fun WelcomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp, vertical = 48.dp),
+                .systemBarsPadding() // Asegura que el contenido respete status y nav bars
+                .padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -39,7 +40,7 @@ fun WelcomeScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.isotipo),
+                    painter = painterResource(id = R.drawable.logo_ruvo),
                     contentDescription = "Ruvo Logo",
                     modifier = Modifier.size(200.dp),
                     contentScale = ContentScale.Fit

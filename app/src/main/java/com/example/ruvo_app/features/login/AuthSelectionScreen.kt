@@ -25,34 +25,39 @@ fun AuthSelectionScreen(
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = Color.White // Fondo total de la pantalla
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp, vertical = 64.dp),
+                .padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Center content: Logo
+            // Contenido Central: Logo (sin systemBarsPadding para que pueda subir más si es necesario)
             Box(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .statusBarsPadding(), // Solo el logo respeta la barra de estado si está muy arriba
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.isotipo),
+                    painter = painterResource(id = R.drawable.logo_ruvo),
                     contentDescription = "Ruvo Logo",
                     modifier = Modifier.size(180.dp),
                     contentScale = ContentScale.Fit
                 )
             }
 
-            // Bottom content: Action buttons
+            // Botones de acción inferiores
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding() // Asegura que los botones no queden tras la barra de navegación
+                    .padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Login Button
+                // Botón Iniciar Sesión
                 Button(
                     onClick = onLoginClick,
                     shape = RoundedCornerShape(28.dp),
@@ -73,11 +78,11 @@ fun AuthSelectionScreen(
                     )
                 }
 
-                // Register Button
+                // Botón Registrarme
                 OutlinedButton(
                     onClick = onRegisterClick,
                     shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(1.dp, Color.Gray),
+                    border = BorderStroke(1.dp, Color.LightGray),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color.Black
                     ),

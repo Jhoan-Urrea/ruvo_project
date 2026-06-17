@@ -1,5 +1,6 @@
 package com.example.ruvo_app.features.register
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,31 +22,21 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ruvo_app.core.theme.Ruvo_appTheme
-import com.example.ruvo_app.data.repository.AuthRepositoryImpl
-import com.example.ruvo_app.domain.usecase.RegisterUseCase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onBackClick: () -> Unit = {},
     onRegisterSuccess: () -> Unit = {},
-    viewModel: RegisterViewModel = viewModel(
-        factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return RegisterViewModel(RegisterUseCase(AuthRepositoryImpl())) as T
-            }
-        }
-    )
+    viewModel: RegisterViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { },
@@ -59,21 +50,28 @@ fun RegisterScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+                    containerColor = Color.Transparent // Transparente para ver el fondo
+                ),
+                windowInsets = WindowInsets.statusBars // Dibuja detrás de la barra de estado
             )
-        }
+        },
+        containerColor = Color.White,
+        contentWindowInsets = WindowInsets(0.dp) // Evita que Scaffold añada padding extra
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding()) // Solo el espacio de la TopAppBar
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 32.dp)
-                    .verticalScroll(scrollState),
+                    .imePadding()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = "Crear cuenta",
@@ -86,7 +84,6 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Error Message
                 if (uiState.error != null) {
                     Text(
                         text = uiState.error!!,
@@ -96,7 +93,6 @@ fun RegisterScreen(
                     )
                 }
 
-                // Full Name Field
                 Text(
                     text = "Nombre completo",
                     style = MaterialTheme.typography.bodyMedium,
@@ -107,18 +103,19 @@ fun RegisterScreen(
                     value = uiState.fullName,
                     onValueChange = { viewModel.onFullNameChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Juan Pérez") },
+                    placeholder = { Text("Juan Pérez", color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color(0xFFF8F9FA),
+                        unfocusedContainerColor = Color(0xFFF8F9FA)
                     )
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Phone Field
                 Text(
                     text = "Teléfono",
                     style = MaterialTheme.typography.bodyMedium,
@@ -129,19 +126,20 @@ fun RegisterScreen(
                     value = uiState.phone,
                     onValueChange = { viewModel.onPhoneChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("300 000 0000") },
+                    placeholder = { Text("300 000 0000", color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color(0xFFF8F9FA),
+                        unfocusedContainerColor = Color(0xFFF8F9FA)
                     )
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Email Field
                 Text(
                     text = "Correo electrónico",
                     style = MaterialTheme.typography.bodyMedium,
@@ -152,19 +150,20 @@ fun RegisterScreen(
                     value = uiState.email,
                     onValueChange = { viewModel.onEmailChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("ejemplo@correo.com") },
+                    placeholder = { Text("ejemplo@correo.com", color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color(0xFFF8F9FA),
+                        unfocusedContainerColor = Color(0xFFF8F9FA)
                     )
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Password Field
                 Text(
                     text = "Contraseña",
                     style = MaterialTheme.typography.bodyMedium,
@@ -175,20 +174,22 @@ fun RegisterScreen(
                     value = uiState.password,
                     onValueChange = { viewModel.onPasswordChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("••••••••") },
+                    placeholder = { Text("••••••••", color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
+                            Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.LightGray
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color(0xFFF8F9FA),
+                        unfocusedContainerColor = Color(0xFFF8F9FA)
                     )
                 )
 
@@ -205,31 +206,22 @@ fun RegisterScreen(
                     ),
                     enabled = !uiState.isLoading
                 ) {
-                    Text(
-                        text = "Registrarme",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    } else {
+                        Text(
+                            text = "Registrarme",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
-                    )
+                    }
                 }
 
+                Spacer(modifier = Modifier.navigationBarsPadding())
                 Spacer(modifier = Modifier.height(32.dp))
             }
-
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun RegisterScreenPreview() {
-    Ruvo_appTheme {
-        RegisterScreen()
     }
 }

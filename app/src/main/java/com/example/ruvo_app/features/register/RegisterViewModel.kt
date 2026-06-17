@@ -3,15 +3,24 @@ package com.example.ruvo_app.features.register
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ruvo_app.domain.model.User
+import com.example.ruvo_app.domain.service.Achievement
+import com.example.ruvo_app.domain.service.GamificationService
 import com.example.ruvo_app.domain.usecase.RegisterUseCase
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class RegisterViewModel(
-    private val registerUseCase: RegisterUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+
+@HiltViewModel
+class RegisterViewModel @Inject constructor(
+    private val registerUseCase: RegisterUseCase,
+    private val gamificationService: GamificationService,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -39,12 +48,12 @@ class RegisterViewModel(
         // Simple validation
         if (state.fullName.isBlank() || state.phone.isBlank() || 
             state.email.isBlank() || state.password.isBlank()) {
-            _uiState.update { it.copy(error = "Por favor, completa todos los campos") }
+            _uiState.update { it.copy(error = "error_required_fields") }
             return
         }
 
         if (state.password.length < 6) {
-            _uiState.update { it.copy(error = "La contraseña debe tener al menos 6 caracteres") }
+            _uiState.update { it.copy(error = "error_password_too_short") }
             return
         }
 
@@ -52,9 +61,11 @@ class RegisterViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             
             val user = User(
+                id = "",
                 fullName = state.fullName,
                 phone = state.phone,
-                email = state.email
+                email = state.email,
+                username = state.fullName.replace(" ", "").lowercase() // Default username logic
             )
             
             val result = registerUseCase(user, state.password)
@@ -62,9 +73,14 @@ class RegisterViewModel(
             _uiState.update { it.copy(isLoading = false) }
             
             result.onSuccess {
+                // Award Welcome Achievement
+                val currentUserId = auth.currentUser?.uid
+                if (currentUserId != null) {
+                    gamificationService.checkAndAwardAchievement(currentUserId, Achievement.Bienvenido)
+                }
                 onSuccess()
             }.onFailure { e ->
-                _uiState.update { it.copy(error = e.message ?: "Error al registrar usuario") }
+                _uiState.update { it.copy(error = e.message ?: "error_unknown") }
             }
         }
     }

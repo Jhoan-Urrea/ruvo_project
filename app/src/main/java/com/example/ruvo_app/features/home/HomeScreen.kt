@@ -24,23 +24,25 @@ fun HomeScreen(
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.background // Fondo total de la pantalla
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp, vertical = 64.dp),
+                .statusBarsPadding() // Solo el contenido respeta la barra de estado
+                .navigationBarsPadding() // Solo el contenido respeta la barra de navegación
+                .padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Center content: Logo and Slogan
+            // Contenido Central: Logo y Eslogan
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.isotipo),
+                    painter = painterResource(id = R.drawable.logo_ruvo),
                     contentDescription = "Ruvo Logo",
                     modifier = Modifier.size(180.dp),
                     contentScale = ContentScale.Fit
@@ -60,7 +62,7 @@ fun HomeScreen(
                 )
             }
 
-            // Bottom action: Start Button
+            // Acción Inferior: Botón Empezar
             Button(
                 onClick = onStartClick,
                 shape = RoundedCornerShape(28.dp),

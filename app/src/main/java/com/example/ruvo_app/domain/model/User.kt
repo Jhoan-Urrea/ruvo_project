@@ -1,7 +1,66 @@
 package com.example.ruvo_app.domain.model
 
 data class User(
-    val fullName: String,
-    val phone: String,
-    val email: String
+    val id: String = "",
+    val fullName: String = "",
+    val phone: String = "",
+    val username: String = "",
+    val email: String = "",
+    val profilePictureUrl: String? = null,
+    val role: UserRole = UserRole.USER,
+    val status: AccountStatus = AccountStatus.ACTIVE,
+    val lastActive: String = "",
+    val location: Location? = null,
+    val reputation: Reputation = Reputation(),
+    val stats: UserStats = UserStats()
+) {
+    constructor() : this(id = "")
+}
+
+enum class UserRole { USER, MODERATOR }
+
+enum class AccountStatus { ACTIVE, WARNING, BLOCKED }
+
+data class Location(
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val address: String? = null
+)
+
+data class Reputation(
+    val points: Int = 0,
+    val rating: Float = 0f,
+    val level: UserLevel = UserLevel.PRINCIPIANTE,
+    val badges: List<String> = emptyList()
+) {
+    fun getProgressToNextLevel(): Float {
+        val currentLevelMin = level.minPoints
+        val nextLevelMin = level.next()?.minPoints ?: (currentLevelMin * 2)
+        val range = nextLevelMin - currentLevelMin
+        val progress = points - currentLevelMin
+        return (progress.toFloat() / range.toFloat()).coerceIn(0f, 1f)
+    }
+    
+    fun getPointsNeededForNextLevel(): Int {
+        val nextLevelMin = level.next()?.minPoints ?: return 0
+        return nextLevelMin - points
+    }
+}
+
+enum class UserLevel(val minPoints: Int) {
+    PRINCIPIANTE(0), PROFESIONAL(501), EXPERTO(1501), MAESTRO(4001);
+    fun next(): UserLevel? = entries.getOrNull(ordinal + 1)
+    companion object {
+        fun fromPoints(points: Int): UserLevel {
+            return entries.findLast { points >= it.minPoints } ?: PRINCIPIANTE
+        }
+    }
+}
+
+data class UserStats(
+    val activePosts: Int = 0,
+    val finishedPosts: Int = 0,
+    val pendingVerification: Int = 0,
+    val reportsCount: Int = 0,
+    val totalReviews: Int = 0
 )
